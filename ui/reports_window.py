@@ -5,14 +5,15 @@ from datetime import date
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QTableWidget, QTableWidgetItem, QHeaderView, QDateEdit,
-    QTabWidget, QMessageBox, QRadioButton,
+    QTabWidget, QMessageBox, QRadioButton, QComboBox,
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 
 from reports import sales_register
+from customer import get_all_customers
 from exporter import export_csv, export_xlsx, export_pdf_table
-from printer import open_pdf
+from printer import open_pdf, generate_statement_pdf
 
 
 class ReportTab(QWidget):
@@ -198,6 +199,187 @@ class SalesRegisterTab(ReportTab):
                 self.table.setItem(row, col_idx, item)
 
 
+class CustomerStatementTab(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._build()
+
+    def _build(self):
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
+
+        row1 = QHBoxLayout()
+        row1.addWidget(QLabel("Customer:"))
+        self.cust_combo = QComboBox()
+        self.cust_combo.setMinimumWidth(250)
+        self.cust_combo.setStyleSheet("padding: 4px 8px;")
+        row1.addWidget(self.cust_combo)
+
+        row1.addWidget(QLabel("From:"))
+        self.date_from = QDateEdit()
+        self.date_from.setCalendarPopup(True)
+        self.date_from.setDate(date(date.today().year, 1, 1))
+        self.date_from.setStyleSheet("padding: 4px 8px;")
+        row1.addWidget(self.date_from)
+
+        row1.addWidget(QLabel("To:"))
+        self.date_to = QDateEdit()
+        self.date_to.setCalendarPopup(True)
+        self.date_to.setDate(date.today())
+        self.date_to.setStyleSheet("padding: 4px 8px;")
+        row1.addWidget(self.date_to)
+
+        gen_btn = QPushButton("  Generate Statement")
+        gen_btn.setStyleSheet("""
+            QPushButton { background: #ff9800; color: white; padding: 6px 16px;
+                          border: none; border-radius: 4px; font-weight: bold; }
+            QPushButton:hover { background: #f57c00; }
+        """)
+        gen_btn.clicked.connect(self._generate)
+        row1.addWidget(gen_btn)
+
+        print_btn = QPushButton("  Print PDF")
+        print_btn.setStyleSheet("""
+            QPushButton { background: #3f51b5; color: white; padding: 6px 16px;
+                          border: none; border-radius: 4px; font-weight: bold; }
+            QPushButton:hover { background: #303f9f; }
+        """)
+        print_btn.clicked.connect(self._print_pdf)
+        row1.addWidget(print_btn)
+
+        row1.addStretch()
+        layout.addLayout(row1)
+        layout.addSpacing(8)
+
+        self.table = QTableWidget()
+        self.table.setColumnCount(5)
+        self.table.setHorizontalHeaderLabels(
+            ["Date", "Description", "Debit", "Credit", "Balance"]
+        )
+        self.table.setAlternatingRowColors(True)
+        self.table.setSelectionBehavior(QTableWidget.SelectRows)
+        self.table.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.table.verticalHeader().setVisible(False)
+        self.table.verticalHeader().setDefaultSectionSize(34)
+        self.table.setStyleSheet("""
+            QTableWidget { background: white; border: 1px solid #e0e0e0; border-radius: 4px; }
+            QHeaderView::section { background: #3f51b5; color: white; padding: 6px; font-weight: bold; }
+            QTableWidget::item { padding: 4px; }
+        """)
+        h = self.table.horizontalHeader()
+        h.setSectionResizeMode(1, QHeaderView.Stretch)
+        h.setSectionResizeMode(0, QHeaderView.Interactive)
+        h.setSectionResizeMode(2, QHeaderView.Interactive)
+        h.setSectionResizeMode(3, QHeaderView.Interactive)
+        h.setSectionResizeMode(4, QHeaderView.Interactive)
+        h.resizeSection(0, 100)
+        h.resizeSection(2, 100)
+        h.resizeSection(3, 100)
+        h.resizeSection(4, 100)
+        layout.addWidget(self.table)
+
+        self._stmt_data = None
+        self._load_customers()
+
+    def _load_customers(self):
+        customers = get_all_customers()
+        self.cust_combo.clear()
+        for c in customers:
+            self.cust_combo.addItem(f"{c['name']}  |  {c.get('mobile', '')}", c["id"])
+
+    def _generate(self):
+        idx = self.cust_combo.currentIndex()
+        if idx < 0:
+            QMessageBox.warning(self, "Error", "Please select a customer.")
+            return
+        cid = self.cust_combo.itemData(idx)
+        cname = self.cust_combo.currentText().split("  |")[0]
+        date_from = self.date_from.date().toString("yyyy-MM-dd")
+        date_to = self.date_to.date().toString("yyyy-MM-dd")
+
+        from reports import get_customer_statement
+        self._stmt_data = get_customer_statement(cid, cname, date_from, date_to)
+
+        self.table.setRowCount(0)
+
+        # Opening balance row
+        row = self.table.rowCount()
+        self.table.insertRow(row)
+        self.table.setItem(row, 0, QTableWidgetItem(""))
+        item = QTableWidgetItem("Opening Balance")
+        font = item.font()
+        font.setBold(True)
+        item.setFont(font)
+        self.table.setItem(row, 1, item)
+        self.table.setItem(row, 2, QTableWidgetItem(""))
+        self.table.setItem(row, 3, QTableWidgetItem(""))
+        item = QTableWidgetItem(f"{self._stmt_data['opening_balance']:,.2f}")
+        item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        self.table.setItem(row, 4, item)
+
+        for t in self._stmt_data["transactions"]:
+            row = self.table.rowCount()
+            self.table.insertRow(row)
+            self.table.setItem(row, 0, QTableWidgetItem(t["tx_date"]))
+            desc = f"{t['type']} {t['ref_no']}"
+            self.table.setItem(row, 1, QTableWidgetItem(desc))
+            d = QTableWidgetItem(f"{t['debit']:,.2f}" if t["debit"] else "")
+            if t["debit"]:
+                d.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            self.table.setItem(row, 2, d)
+            c = QTableWidgetItem(f"{t['credit']:,.2f}" if t["credit"] else "")
+            if t["credit"]:
+                c.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            self.table.setItem(row, 3, c)
+            b = QTableWidgetItem(f"{t['balance']:,.2f}")
+            b.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            self.table.setItem(row, 4, b)
+
+        # Closing balance
+        row = self.table.rowCount()
+        self.table.insertRow(row)
+        self.table.setItem(row, 0, QTableWidgetItem(""))
+        self.table.setItem(row, 1, QTableWidgetItem(""))
+        self.table.setItem(row, 2, QTableWidgetItem(""))
+        self.table.setItem(row, 3, QTableWidgetItem(""))
+        self.table.setItem(row, 4, QTableWidgetItem(""))
+
+        row = self.table.rowCount()
+        self.table.insertRow(row)
+        item = QTableWidgetItem("Closing Balance")
+        font = item.font()
+        font.setBold(True)
+        item.setFont(font)
+        self.table.setItem(row, 1, item)
+        self.table.setItem(row, 2, QTableWidgetItem(""))
+        self.table.setItem(row, 3, QTableWidgetItem(""))
+        item = QTableWidgetItem(f"{self._stmt_data['closing_balance']:,.2f}")
+        item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        self.table.setItem(row, 4, item)
+
+    def _print_pdf(self):
+        if not self._stmt_data:
+            QMessageBox.warning(self, "Error", "Generate the statement first.")
+            return
+        try:
+            path = generate_statement_pdf(
+                customer_id=self._stmt_data["customer_id"],
+                customer_name=self._stmt_data["customer_name"],
+                date_from=self._stmt_data["date_from"],
+                date_to=self._stmt_data["date_to"],
+            )
+            open_pdf(path)
+            QMessageBox.information(self, "Printed", f"Statement saved to:\n{path}")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", str(e))
+
+    def refresh(self):
+        self._load_customers()
+        self._stmt_data = None
+        self.table.setRowCount(0)
+
+
 class ReportsWindow(QWidget):
     def __init__(self):
         super().__init__()
@@ -218,8 +400,10 @@ class ReportsWindow(QWidget):
         """)
 
         self.sales_tab = SalesRegisterTab()
+        self.statement_tab = CustomerStatementTab()
 
         self.tabs.addTab(self.sales_tab, "  Sales Register")
+        self.tabs.addTab(self.statement_tab, "  Customer Statement")
 
         layout.addWidget(self.tabs)
 

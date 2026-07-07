@@ -16,6 +16,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from settings import get_company, get_db_setting
 from billing import get_sale_bill, get_entries_for_consolidated_bill
 from receipt import get_receipt
+from reports import get_customer_statement
 from database import get_connection
 
 NAVY = colors.HexColor("#1a237e")
@@ -663,6 +664,170 @@ def generate_consolidated_bill_pdf(
                                                    alignment=TA_CENTER, textColor=GREY)))
     elements.append(Paragraph(
         "This is a computer-generated invoice.",
+        ParagraphStyle("F3", fontName=FONT_NAME, fontSize=7, alignment=TA_CENTER, textColor=GREY),
+    ))
+
+    doc.build(elements)
+    return output_path
+
+
+def generate_statement_pdf(
+    customer_id: int, customer_name: str, date_from: str, date_to: str,
+    output_path: str | None = None,
+) -> str:
+    company = get_company()
+    stmt = get_customer_statement(customer_id, customer_name, date_from, date_to)
+
+    if output_path is None:
+        os.makedirs(PDF_DIR, exist_ok=True)
+        safe_name = customer_name.replace(" ", "_")[:20]
+        output_path = os.path.join(
+            PDF_DIR, f"statement_{safe_name}_{date_from}_{date_to}.pdf"
+        )
+
+    doc = SimpleDocTemplate(
+        output_path, pagesize=A4,
+        leftMargin=12*mm, rightMargin=12*mm,
+        topMargin=8*mm, bottomMargin=10*mm,
+    )
+    elements = []
+
+    elements.append(_header_block(company))
+    elements.append(Spacer(1, 3*mm))
+
+    elements.append(_title_band("CUSTOMER STATEMENT"))
+    elements.append(Spacer(1, 4*mm))
+
+    # Info block
+    left_rows = [
+        _info_pair("Customer", f"<b>{customer_name}</b>"),
+        _info_pair("Period", f"<b>{date_from}</b> to <b>{date_to}</b>"),
+        _info_pair(
+            "Opening Balance",
+            f"<b>{stmt['opening_balance']:,.2f}</b>",
+        ),
+    ]
+    left_tbl = Table(left_rows, colWidths=[30*mm, 58*mm])
+    left_tbl.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("TOPPADDING", (0, 0), (-1, -1), 1),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
+    ]))
+    left_wrap = Table([[left_tbl]], colWidths=[88*mm])
+    left_wrap.setStyle(TableStyle([
+        ("BOX", (0, 0), (-1, -1), 0.4, BORDER),
+        ("TOPPADDING", (0, 0), (-1, -1), 3),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+    ]))
+
+    right_rows = [
+        _info_pair("Total Bills", f"<b>{sum(t['debit'] for t in stmt['transactions']):,.2f}</b>"),
+        _info_pair("Total Received", f"<b>{sum(t['credit'] for t in stmt['transactions']):,.2f}</b>"),
+        _info_pair(
+            "Closing Balance",
+            f"<b>{stmt['closing_balance']:,.2f}</b>",
+        ),
+    ]
+    right_tbl = Table(right_rows, colWidths=[26*mm, 62*mm])
+    right_tbl.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("TOPPADDING", (0, 0), (-1, -1), 1),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
+    ]))
+    right_wrap = Table([[right_tbl]], colWidths=[88*mm])
+    right_wrap.setStyle(TableStyle([
+        ("BOX", (0, 0), (-1, -1), 0.4, BORDER),
+        ("TOPPADDING", (0, 0), (-1, -1), 3),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+    ]))
+
+    info_table = Table([[left_wrap, right_wrap]], colWidths=[88*mm, 88*mm])
+    info_table.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+    ]))
+    elements.append(info_table)
+    elements.append(Spacer(1, 4*mm))
+
+    # Transaction table
+    hdr = ["Date", "Description", "Debit", "Credit", "Balance"]
+    cw = [26*mm, 52*mm, 28*mm, 28*mm, 28*mm]
+
+    data = [hdr]
+
+    # Opening balance row
+    data.append([
+        "",
+        Paragraph("<b>Opening Balance</b>",
+                   ParagraphStyle("OB", fontName=FONT_NAME, fontSize=8)),
+        "",
+        "",
+        f"{stmt['opening_balance']:,.2f}",
+    ])
+
+    for t in stmt["transactions"]:
+        desc = f"{t['type']} {t['ref_no']}"
+        data.append([
+            t["tx_date"],
+            desc,
+            f"{t['debit']:,.2f}" if t["debit"] else "",
+            f"{t['credit']:,.2f}" if t["credit"] else "",
+            f"{t['balance']:,.2f}",
+        ])
+
+    # Totals row
+    total_debit = sum(t["debit"] for t in stmt["transactions"])
+    total_credit = sum(t["credit"] for t in stmt["transactions"])
+    data.append(["", "", "", "", ""])
+    data.append([
+        "",
+        Paragraph("<b>Total</b>",
+                   ParagraphStyle("TTL", fontName=FONT_NAME, fontSize=9)),
+        f"{total_debit:,.2f}" if total_debit else "",
+        f"{total_credit:,.2f}" if total_credit else "",
+        "",
+    ])
+
+    tbl = Table(data, colWidths=cw, repeatRows=1)
+    style_cmds = [
+        ("BACKGROUND", (0, 0), (-1, 0), NAVY),
+        ("TEXTCOLOR", (0, 0), (-1, 0), WHITE),
+        ("FONTNAME", (0, 0), (-1, -1), FONT_NAME),
+        ("FONTSIZE", (0, 0), (-1, 0), 8),
+        ("FONTSIZE", (0, 1), (-1, -1), 7.5),
+        ("FONTSIZE", (0, -1), (-1, -1), 10),
+        ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+        ("ALIGN", (2, 1), (-1, -1), "RIGHT"),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("GRID", (0, 1), (-1, -3), 0.3, BORDER),
+        ("LINEABOVE", (0, -2), (-1, -2), 0.6, NAVY),
+        ("LINEABOVE", (0, -1), (-1, -1), 1.0, NAVY),
+        ("BACKGROUND", (0, -1), (-1, -1), LIGHT_NAVY),
+        ("BACKGROUND", (0, 1), (-1, 1), LIGHT_GREY),
+        ("TOPPADDING", (0, 0), (-1, -1), 2),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+        ("LEFTPADDING", (0, 0), (-1, -1), 3),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 3),
+    ]
+    tbl.setStyle(TableStyle(style_cmds))
+    elements.append(tbl)
+    elements.append(Spacer(1, 4*mm))
+
+    # Footer
+    elements.append(HRFlowable(width="100%", thickness=0.3, color=BORDER, spaceAfter=2*mm))
+    if company.get("footer_line1"):
+        elements.append(Paragraph(company["footer_line1"],
+                                   ParagraphStyle("F1", fontName=FONT_NAME, fontSize=7,
+                                                   alignment=TA_CENTER, textColor=GREY)))
+    if company.get("footer_line2"):
+        elements.append(Paragraph(company["footer_line2"],
+                                   ParagraphStyle("F2", fontName=FONT_NAME, fontSize=7,
+                                                   alignment=TA_CENTER, textColor=GREY)))
+    elements.append(Paragraph(
+        "This is a computer-generated statement.",
         ParagraphStyle("F3", fontName=FONT_NAME, fontSize=7, alignment=TA_CENTER, textColor=GREY),
     ))
 
