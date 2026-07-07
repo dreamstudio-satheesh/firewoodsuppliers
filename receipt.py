@@ -3,7 +3,7 @@ from database import get_connection
 
 def create_receipt(
     receipt_no: str,
-    bill_no: str = "",
+    bill_no: str | None = None,
     customer_id: int = 0,
     customer_name: str = "",
     customer_mobile: str = "",
@@ -15,13 +15,14 @@ def create_receipt(
     notes: str = "",
 ) -> int:
     conn = get_connection()
+    bill_no_param = bill_no if bill_no else None
     cur = conn.execute(
         """INSERT INTO receipt (receipt_no, bill_no, customer_id, customer_name,
            customer_mobile, receipt_date, amount, amount_in_words, mode,
            reference_no, notes)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
-            receipt_no, bill_no, customer_id, customer_name, customer_mobile,
+            receipt_no, bill_no_param, customer_id, customer_name, customer_mobile,
             receipt_date, amount, amount_in_words, mode, reference_no, notes,
         ),
     )
