@@ -149,7 +149,7 @@ def _header_block(company: dict) -> Table:
     if addr:
         rows.append([Paragraph(
             addr.replace("\n", "<br/>"),
-            ParagraphStyle("H2", fontName=FONT_NAME, fontSize=8.5, alignment=TA_CENTER,
+            ParagraphStyle("H2", fontName=FONT_NAME, fontSize=9.5, alignment=TA_CENTER,
                             leading=12, textColor=BLACK),
         )])
 
@@ -163,7 +163,7 @@ def _header_block(company: dict) -> Table:
     if reg_parts:
         rows.append([Paragraph(
             " | ".join(reg_parts),
-            ParagraphStyle("Reg", fontName=FONT_NAME, fontSize=7.5, alignment=TA_CENTER,
+            ParagraphStyle("Reg", fontName=FONT_NAME, fontSize=9.5, alignment=TA_CENTER,
                             textColor=GREY, leading=10),
         )])
 
@@ -202,9 +202,9 @@ def _title_band(text: str) -> Table:
 def _info_pair(label: str, value: str) -> list:
     return [
         Paragraph(f"<b>{label}</b>",
-                  ParagraphStyle("IL", fontName=FONT_NAME, fontSize=9, textColor=GREY)),
+                  ParagraphStyle("IL", fontName=FONT_NAME, fontSize=10, textColor=GREY)),
         Paragraph(value,
-                  ParagraphStyle("IV", fontName=FONT_NAME, fontSize=9, textColor=BLACK)),
+                  ParagraphStyle("IV", fontName=FONT_NAME, fontSize=10, textColor=BLACK)),
     ]
 
 
@@ -260,9 +260,9 @@ def generate_bill_pdf(bill_id: int, output_path: str | None = None) -> str:
 
     right_rows = [
         [Paragraph("<b>Bill To</b>",
-                   ParagraphStyle("BL", fontName=FONT_NAME, fontSize=9, textColor=GREY)),
+                   ParagraphStyle("BL", fontName=FONT_NAME, fontSize=10, textColor=GREY)),
          Paragraph(cust_text,
-                   ParagraphStyle("BV", fontName=FONT_NAME, fontSize=9, textColor=BLACK))],
+                   ParagraphStyle("BV", fontName=FONT_NAME, fontSize=10, textColor=BLACK))],
     ]
     right_tbl = Table(right_rows, colWidths=[20*mm, 68*mm])
     right_tbl.setStyle(TableStyle([
@@ -311,9 +311,9 @@ def generate_bill_pdf(bill_id: int, output_path: str | None = None) -> str:
         ("BACKGROUND", (0, 0), (-1, 0), NAVY),
         ("TEXTCOLOR", (0, 0), (-1, 0), WHITE),
         ("FONTNAME", (0, 0), (-1, -1), FONT_NAME),
-        ("FONTSIZE", (0, 0), (-1, 0), 8),
-        ("FONTSIZE", (0, 1), (-1, -1), 8),
-        ("FONTSIZE", (0, -1), (-1, -1), 11),
+        ("FONTSIZE", (0, 0), (-1, 0), 10),
+        ("FONTSIZE", (0, 1), (-1, -1), 10),
+        ("FONTSIZE", (0, -1), (-1, -1), 12),
         ("ALIGN", (0, 0), (-1, 0), "CENTER"),
         ("ALIGN", (0, 1), (0, -1), "CENTER"),
         ("ALIGN", (3, 1), (-1, -1), "RIGHT"),
@@ -334,9 +334,9 @@ def generate_bill_pdf(bill_id: int, output_path: str | None = None) -> str:
     words = bill.get("amount_in_words") or _amount_in_words(bill["amount"])
     aw_tbl = Table(
         [[Paragraph("<b>Amount in Words:</b>",
-                     ParagraphStyle("AWL", fontName=FONT_NAME, fontSize=9, textColor=NAVY)),
+                     ParagraphStyle("AWL", fontName=FONT_NAME, fontSize=10, textColor=NAVY)),
           Paragraph(words,
-                     ParagraphStyle("AWV", fontName=FONT_NAME, fontSize=9, textColor=NAVY, leading=13))]],
+                     ParagraphStyle("AWV", fontName=FONT_NAME, fontSize=10, textColor=NAVY, leading=13))]],
         colWidths=[30*mm, 132*mm],
     )
     aw_tbl.setStyle(TableStyle([
@@ -361,9 +361,9 @@ def generate_bill_pdf(bill_id: int, output_path: str | None = None) -> str:
         bank_text = "&nbsp;&nbsp;|&nbsp;&nbsp;".join(bank_parts)
         bk_tbl = Table(
             [[Paragraph("<b>Bank Details:</b>",
-                         ParagraphStyle("BKL", fontName=FONT_NAME, fontSize=9, textColor=GREY)),
+                         ParagraphStyle("BKL", fontName=FONT_NAME, fontSize=10, textColor=GREY)),
               Paragraph(bank_text,
-                         ParagraphStyle("BKV", fontName=FONT_NAME, fontSize=9, textColor=BLACK))]],
+                         ParagraphStyle("BKV", fontName=FONT_NAME, fontSize=10, textColor=BLACK))]],
             colWidths=[26*mm, 136*mm],
         )
         bk_tbl.setStyle(TableStyle([
@@ -405,7 +405,7 @@ def generate_bill_pdf(bill_id: int, output_path: str | None = None) -> str:
     )
     sig_tbl = Table(
         [[Paragraph(sig_text,
-                     ParagraphStyle("SV", fontName=FONT_NAME, fontSize=9,
+                     ParagraphStyle("SV", fontName=FONT_NAME, fontSize=10,
                                      alignment=TA_RIGHT, textColor=BLACK, leading=16))]],
         colWidths=[80*mm],
     )
@@ -427,15 +427,15 @@ def generate_bill_pdf(bill_id: int, output_path: str | None = None) -> str:
     elements.append(HRFlowable(width="100%", thickness=0.3, color=BORDER, spaceAfter=2*mm))
     if company.get("footer_line1"):
         elements.append(Paragraph(company["footer_line1"],
-                                   ParagraphStyle("F1", fontName=FONT_NAME, fontSize=7,
+                                   ParagraphStyle("F1", fontName=FONT_NAME, fontSize=8,
                                                    alignment=TA_CENTER, textColor=GREY)))
     if company.get("footer_line2"):
         elements.append(Paragraph(company["footer_line2"],
-                                   ParagraphStyle("F2", fontName=FONT_NAME, fontSize=7,
+                                   ParagraphStyle("F2", fontName=FONT_NAME, fontSize=8,
                                                    alignment=TA_CENTER, textColor=GREY)))
     elements.append(Paragraph(
         "This is a computer-generated bill.",
-        ParagraphStyle("F3", fontName=FONT_NAME, fontSize=7, alignment=TA_CENTER, textColor=GREY),
+        ParagraphStyle("F3", fontName=FONT_NAME, fontSize=8, alignment=TA_CENTER, textColor=GREY),
     ))
 
     doc.build(elements)
@@ -540,21 +540,21 @@ def generate_consolidated_bill_pdf(
         ("BACKGROUND", (0, 0), (-1, 0), NAVY),
         ("TEXTCOLOR", (0, 0), (-1, 0), WHITE),
         ("FONTNAME", (0, 0), (-1, -1), FONT_NAME),
-        ("FONTSIZE", (0, 0), (-1, 0), 8),
-        ("FONTSIZE", (0, 1), (-1, -1), 7.5),
-        ("FONTSIZE", (0, -1), (-1, -1), 11),
+        ("FONTSIZE", (0, 0), (-1, 0), 9),
+        ("FONTSIZE", (0, 1), (-1, -1), 9),
+        ("FONTSIZE", (0, -1), (-1, -1), 12),
         ("ALIGN", (0, 0), (-1, 0), "CENTER"),
         ("ALIGN", (0, 1), (0, -1), "CENTER"),
-        ("ALIGN", (4, 1), (-1, -1), "RIGHT"),
+        ("ALIGN", (3, 1), (-1, -1), "RIGHT"),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
         ("GRID", (0, 1), (-1, total_start - 1), 0.3, BORDER),
         ("LINEABOVE", (0, total_start), (-1, total_start), 0.6, NAVY),
         ("LINEABOVE", (0, -1), (-1, -1), 1.0, NAVY),
         ("BACKGROUND", (0, -1), (-1, -1), LIGHT_NAVY),
-        ("TOPPADDING", (0, 0), (-1, -1), 2),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
-        ("LEFTPADDING", (0, 0), (-1, -1), 2),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 2),
+        ("TOPPADDING", (0, 0), (-1, -1), 3),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+        ("LEFTPADDING", (0, 0), (-1, -1), 3),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 3),
     ]
     tbl.setStyle(TableStyle(style_cmds))
     elements.append(tbl)
@@ -563,9 +563,9 @@ def generate_consolidated_bill_pdf(
     words = _amount_in_words(total_amount)
     aw_tbl = Table(
         [[Paragraph("<b>Amount in Words:</b>",
-                     ParagraphStyle("AWL", fontName=FONT_NAME, fontSize=9, textColor=NAVY)),
+                     ParagraphStyle("AWL", fontName=FONT_NAME, fontSize=10, textColor=NAVY)),
           Paragraph(words,
-                     ParagraphStyle("AWV", fontName=FONT_NAME, fontSize=9, textColor=NAVY, leading=13))]],
+                     ParagraphStyle("AWV", fontName=FONT_NAME, fontSize=10, textColor=NAVY, leading=13))]],
         colWidths=[30*mm, 132*mm],
     )
     aw_tbl.setStyle(TableStyle([
@@ -590,9 +590,9 @@ def generate_consolidated_bill_pdf(
         bank_text = "&nbsp;&nbsp;|&nbsp;&nbsp;".join(bank_parts)
         bk_tbl = Table(
             [[Paragraph("<b>Bank Details:</b>",
-                         ParagraphStyle("BKL", fontName=FONT_NAME, fontSize=9, textColor=GREY)),
+                         ParagraphStyle("BKL", fontName=FONT_NAME, fontSize=10, textColor=GREY)),
               Paragraph(bank_text,
-                         ParagraphStyle("BKV", fontName=FONT_NAME, fontSize=9, textColor=BLACK))]],
+                         ParagraphStyle("BKV", fontName=FONT_NAME, fontSize=10, textColor=BLACK))]],
             colWidths=[26*mm, 136*mm],
         )
         bk_tbl.setStyle(TableStyle([
@@ -634,7 +634,7 @@ def generate_consolidated_bill_pdf(
     )
     sig_tbl = Table(
         [[Paragraph(sig_text,
-                     ParagraphStyle("SV", fontName=FONT_NAME, fontSize=9,
+                     ParagraphStyle("SV", fontName=FONT_NAME, fontSize=10,
                                      alignment=TA_RIGHT, textColor=BLACK, leading=16))]],
         colWidths=[80*mm],
     )
@@ -656,15 +656,15 @@ def generate_consolidated_bill_pdf(
     elements.append(HRFlowable(width="100%", thickness=0.3, color=BORDER, spaceAfter=2*mm))
     if company.get("footer_line1"):
         elements.append(Paragraph(company["footer_line1"],
-                                   ParagraphStyle("F1", fontName=FONT_NAME, fontSize=7,
+                                   ParagraphStyle("F1", fontName=FONT_NAME, fontSize=8,
                                                    alignment=TA_CENTER, textColor=GREY)))
     if company.get("footer_line2"):
         elements.append(Paragraph(company["footer_line2"],
-                                   ParagraphStyle("F2", fontName=FONT_NAME, fontSize=7,
+                                   ParagraphStyle("F2", fontName=FONT_NAME, fontSize=8,
                                                    alignment=TA_CENTER, textColor=GREY)))
     elements.append(Paragraph(
         "This is a computer-generated invoice.",
-        ParagraphStyle("F3", fontName=FONT_NAME, fontSize=7, alignment=TA_CENTER, textColor=GREY),
+        ParagraphStyle("F3", fontName=FONT_NAME, fontSize=8, alignment=TA_CENTER, textColor=GREY),
     ))
 
     doc.build(elements)
@@ -812,9 +812,9 @@ def generate_statement_pdf(
         ("BACKGROUND", (0, 0), (-1, 0), NAVY),
         ("TEXTCOLOR", (0, 0), (-1, 0), WHITE),
         ("FONTNAME", (0, 0), (-1, -1), FONT_NAME),
-        ("FONTSIZE", (0, 0), (-1, 0), 8),
-        ("FONTSIZE", (0, 1), (-1, -1), 7.5),
-        ("FONTSIZE", (0, -1), (-1, -1), 10),
+        ("FONTSIZE", (0, 0), (-1, 0), 9),
+        ("FONTSIZE", (0, 1), (-1, -1), 9),
+        ("FONTSIZE", (0, -1), (-1, -1), 11),
         ("ALIGN", (0, 0), (-1, 0), "CENTER"),
         ("ALIGN", (3, 1), (-1, -1), "RIGHT"),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
@@ -823,8 +823,8 @@ def generate_statement_pdf(
         ("LINEABOVE", (0, -1), (-1, -1), 1.0, NAVY),
         ("BACKGROUND", (0, -1), (-1, -1), LIGHT_NAVY),
         ("BACKGROUND", (0, 1), (-1, 1), LIGHT_GREY),
-        ("TOPPADDING", (0, 0), (-1, -1), 2),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+        ("TOPPADDING", (0, 0), (-1, -1), 3),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
         ("LEFTPADDING", (0, 0), (-1, -1), 3),
         ("RIGHTPADDING", (0, 0), (-1, -1), 3),
     ]
@@ -836,15 +836,15 @@ def generate_statement_pdf(
     elements.append(HRFlowable(width="100%", thickness=0.3, color=BORDER, spaceAfter=2*mm))
     if company.get("footer_line1"):
         elements.append(Paragraph(company["footer_line1"],
-                                   ParagraphStyle("F1", fontName=FONT_NAME, fontSize=7,
+                                   ParagraphStyle("F1", fontName=FONT_NAME, fontSize=8,
                                                    alignment=TA_CENTER, textColor=GREY)))
     if company.get("footer_line2"):
         elements.append(Paragraph(company["footer_line2"],
-                                   ParagraphStyle("F2", fontName=FONT_NAME, fontSize=7,
+                                   ParagraphStyle("F2", fontName=FONT_NAME, fontSize=8,
                                                    alignment=TA_CENTER, textColor=GREY)))
     elements.append(Paragraph(
         "This is a computer-generated statement.",
-        ParagraphStyle("F3", fontName=FONT_NAME, fontSize=7, alignment=TA_CENTER, textColor=GREY),
+        ParagraphStyle("F3", fontName=FONT_NAME, fontSize=8, alignment=TA_CENTER, textColor=GREY),
     ))
 
     doc.build(elements)
@@ -906,9 +906,9 @@ def generate_receipt_pdf(receipt_id: int, output_path: str | None = None) -> str
     cust_text = "<br/>".join(cust_lines)
     right_rows = [
         [Paragraph("<b>Received From</b>",
-                    ParagraphStyle("BL", fontName=FONT_NAME, fontSize=9, textColor=GREY)),
+                    ParagraphStyle("BL", fontName=FONT_NAME, fontSize=10, textColor=GREY)),
          Paragraph(cust_text,
-                    ParagraphStyle("BV", fontName=FONT_NAME, fontSize=9, textColor=BLACK))],
+                    ParagraphStyle("BV", fontName=FONT_NAME, fontSize=10, textColor=BLACK))],
     ]
     right_tbl = Table(right_rows, colWidths=[24*mm, 64*mm])
     right_tbl.setStyle(TableStyle([
@@ -963,9 +963,9 @@ def generate_receipt_pdf(receipt_id: int, output_path: str | None = None) -> str
     if rec.get("notes"):
         nt = Table(
             [[Paragraph("<b>Notes:</b>",
-                         ParagraphStyle("NL", fontName=FONT_NAME, fontSize=9, textColor=GREY)),
+                         ParagraphStyle("NL", fontName=FONT_NAME, fontSize=10, textColor=GREY)),
               Paragraph(rec["notes"],
-                         ParagraphStyle("NV", fontName=FONT_NAME, fontSize=9, textColor=BLACK))]],
+                         ParagraphStyle("NV", fontName=FONT_NAME, fontSize=10, textColor=BLACK))]],
             colWidths=[24*mm, 138*mm],
         )
         nt.setStyle(TableStyle([
@@ -987,7 +987,7 @@ def generate_receipt_pdf(receipt_id: int, output_path: str | None = None) -> str
     )
     sig_tbl = Table(
         [[Paragraph(sig_text,
-                     ParagraphStyle("SV", fontName=FONT_NAME, fontSize=9,
+                     ParagraphStyle("SV", fontName=FONT_NAME, fontSize=10,
                                      alignment=TA_RIGHT, textColor=BLACK, leading=16))]],
         colWidths=[90*mm],
     )
@@ -1002,15 +1002,15 @@ def generate_receipt_pdf(receipt_id: int, output_path: str | None = None) -> str
     elements.append(HRFlowable(width="100%", thickness=0.3, color=BORDER, spaceAfter=2*mm))
     if company.get("footer_line1"):
         elements.append(Paragraph(company["footer_line1"],
-                                   ParagraphStyle("F1", fontName=FONT_NAME, fontSize=7,
+                                   ParagraphStyle("F1", fontName=FONT_NAME, fontSize=8,
                                                    alignment=TA_CENTER, textColor=GREY)))
     if company.get("footer_line2"):
         elements.append(Paragraph(company["footer_line2"],
-                                   ParagraphStyle("F2", fontName=FONT_NAME, fontSize=7,
+                                   ParagraphStyle("F2", fontName=FONT_NAME, fontSize=8,
                                                    alignment=TA_CENTER, textColor=GREY)))
     elements.append(Paragraph(
         "This is a computer-generated receipt.",
-        ParagraphStyle("F3", fontName=FONT_NAME, fontSize=7, alignment=TA_CENTER, textColor=GREY),
+        ParagraphStyle("F3", fontName=FONT_NAME, fontSize=8, alignment=TA_CENTER, textColor=GREY),
     ))
 
     doc.build(elements)
@@ -1069,9 +1069,9 @@ def generate_blank_invoice_pdf(
                   "Mobile: ___________________________")
     right_rows = [
         [Paragraph("<b>Bill To</b>",
-                   ParagraphStyle("BL", fontName=FONT_NAME, fontSize=9, textColor=GREY)),
+                   ParagraphStyle("BL", fontName=FONT_NAME, fontSize=10, textColor=GREY)),
          Paragraph(blank_cust,
-                   ParagraphStyle("BV", fontName=FONT_NAME, fontSize=9, textColor=BLACK, leading=16))],
+                   ParagraphStyle("BV", fontName=FONT_NAME, fontSize=10, textColor=BLACK, leading=16))],
     ]
     right_tbl = Table(right_rows, colWidths=[20*mm, 68*mm])
     right_tbl.setStyle(TableStyle([
@@ -1110,9 +1110,9 @@ def generate_blank_invoice_pdf(
         ("BACKGROUND", (0, 0), (-1, 0), NAVY),
         ("TEXTCOLOR", (0, 0), (-1, 0), WHITE),
         ("FONTNAME", (0, 0), (-1, -1), FONT_NAME),
-        ("FONTSIZE", (0, 0), (-1, 0), 8),
-        ("FONTSIZE", (0, 1), (-1, -1), 8),
-        ("FONTSIZE", (0, -1), (-1, -1), 11),
+        ("FONTSIZE", (0, 0), (-1, 0), 10),
+        ("FONTSIZE", (0, 1), (-1, -1), 10),
+        ("FONTSIZE", (0, -1), (-1, -1), 12),
         ("ALIGN", (0, 0), (-1, 0), "CENTER"),
         ("ALIGN", (0, 1), (0, -1), "CENTER"),
         ("ALIGN", (3, 1), (-1, -1), "RIGHT"),
@@ -1132,9 +1132,9 @@ def generate_blank_invoice_pdf(
 
     aw_tbl = Table(
         [[Paragraph("<b>Amount in Words:</b>",
-                     ParagraphStyle("AWL", fontName=FONT_NAME, fontSize=9, textColor=NAVY)),
+                     ParagraphStyle("AWL", fontName=FONT_NAME, fontSize=10, textColor=NAVY)),
           Paragraph("_______________________________________________________",
-                     ParagraphStyle("AWV", fontName=FONT_NAME, fontSize=9, textColor=NAVY, leading=13))]],
+                     ParagraphStyle("AWV", fontName=FONT_NAME, fontSize=10, textColor=NAVY, leading=13))]],
         colWidths=[30*mm, 132*mm],
     )
     aw_tbl.setStyle(TableStyle([
@@ -1159,9 +1159,9 @@ def generate_blank_invoice_pdf(
         bank_text = "&nbsp;&nbsp;|&nbsp;&nbsp;".join(bank_parts)
         bk_tbl = Table(
             [[Paragraph("<b>Bank Details:</b>",
-                         ParagraphStyle("BKL", fontName=FONT_NAME, fontSize=9, textColor=GREY)),
+                         ParagraphStyle("BKL", fontName=FONT_NAME, fontSize=10, textColor=GREY)),
               Paragraph(bank_text,
-                         ParagraphStyle("BKV", fontName=FONT_NAME, fontSize=9, textColor=BLACK))]],
+                         ParagraphStyle("BKV", fontName=FONT_NAME, fontSize=10, textColor=BLACK))]],
             colWidths=[26*mm, 136*mm],
         )
         bk_tbl.setStyle(TableStyle([
@@ -1203,7 +1203,7 @@ def generate_blank_invoice_pdf(
     )
     sig_tbl = Table(
         [[Paragraph(sig_text,
-                     ParagraphStyle("SV", fontName=FONT_NAME, fontSize=9,
+                     ParagraphStyle("SV", fontName=FONT_NAME, fontSize=10,
                                      alignment=TA_RIGHT, textColor=BLACK, leading=16))]],
         colWidths=[80*mm],
     )
@@ -1225,15 +1225,15 @@ def generate_blank_invoice_pdf(
     elements.append(HRFlowable(width="100%", thickness=0.3, color=BORDER, spaceAfter=2*mm))
     if company.get("footer_line1"):
         elements.append(Paragraph(company["footer_line1"],
-                                   ParagraphStyle("F1", fontName=FONT_NAME, fontSize=7,
+                                   ParagraphStyle("F1", fontName=FONT_NAME, fontSize=8,
                                                    alignment=TA_CENTER, textColor=GREY)))
     if company.get("footer_line2"):
         elements.append(Paragraph(company["footer_line2"],
-                                   ParagraphStyle("F2", fontName=FONT_NAME, fontSize=7,
+                                   ParagraphStyle("F2", fontName=FONT_NAME, fontSize=8,
                                                    alignment=TA_CENTER, textColor=GREY)))
     elements.append(Paragraph(
         "This is a blank bill form for handwritten use.",
-        ParagraphStyle("F3", fontName=FONT_NAME, fontSize=7, alignment=TA_CENTER, textColor=GREY),
+        ParagraphStyle("F3", fontName=FONT_NAME, fontSize=8, alignment=TA_CENTER, textColor=GREY),
     ))
 
     doc.build(elements)
