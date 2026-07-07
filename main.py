@@ -122,7 +122,7 @@ def main():
             sys.exit(0)
 
     window = MainWindow()
-    window.showMaximized()
+    window.show()
     sys.exit(app.exec())
 
 

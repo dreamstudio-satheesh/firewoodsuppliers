@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QHeaderView, QLineEdit,
     QGridLayout, QScrollArea,
 )
-from PySide6.QtCore import Qt, Signal, Slot, QSize
+from PySide6.QtCore import Qt, Signal, Slot, QSize, QTimer
 from PySide6.QtGui import QFont, QIcon, QColor, QPalette, QAction
 
 from billing import get_dashboard_data
@@ -76,7 +76,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Firewood Billing")
         self.setMinimumSize(1200, 750)
         self.setMinimumSize(1400, 850)
-        self.resize(1400, 850)
+        QTimer.singleShot(0, self.showMaximized)
 
         central = QWidget()
         self.setCentralWidget(central)
