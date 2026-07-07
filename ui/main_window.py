@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QHeaderView, QLineEdit,
     QGridLayout, QScrollArea,
 )
-from PySide6.QtCore import Qt, Signal, Slot, QSize, QTimer
+from PySide6.QtCore import Qt, Signal, Slot, QSize
 from PySide6.QtGui import QFont, QIcon, QColor, QPalette, QAction
 
 from billing import get_dashboard_data
@@ -76,7 +76,6 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Firewood Billing")
         self.setMinimumSize(1200, 750)
         self.setMinimumSize(1400, 850)
-        QTimer.singleShot(0, self.showMaximized)
 
         central = QWidget()
         self.setCentralWidget(central)
@@ -383,6 +382,12 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Backup Complete", f"Database backed up to:\n{path}")
         except Exception as e:
             QMessageBox.critical(self, "Backup Failed", str(e))
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        if not hasattr(self, '_maximized'):
+            self._maximized = True
+            self.showMaximized()
 
     def closeEvent(self, event):
         close()
