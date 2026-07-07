@@ -146,6 +146,12 @@ def init_db():
 
     conn.commit()
 
+    # Migrate existing database: add opening_balance if missing
+    try:
+        conn.execute("ALTER TABLE customer ADD COLUMN opening_balance REAL NOT NULL DEFAULT 0")
+    except Exception:
+        pass  # column already exists
+
 
 def backup_database() -> str:
     os.makedirs(BACKUP_DIR, exist_ok=True)

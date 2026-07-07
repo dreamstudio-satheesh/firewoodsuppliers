@@ -76,6 +76,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Firewood Billing")
         self.setMinimumSize(1200, 750)
         self.setMinimumSize(1400, 850)
+        self.resize(1920, 1000)
 
         central = QWidget()
         self.setCentralWidget(central)
