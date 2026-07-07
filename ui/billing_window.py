@@ -112,6 +112,7 @@ class BillingWindow(QWidget):
         self.vehicle_no = QLineEdit()
         self.vehicle_no.setPlaceholderText("Enter vehicle number")
         self.vehicle_no.setStyleSheet("padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px;")
+        self.vehicle_no.installEventFilter(self)
         detail_layout.addRow("Vehicle No:", self.vehicle_no)
 
         weight_layout = QHBoxLayout()
@@ -156,6 +157,7 @@ class BillingWindow(QWidget):
         self.rate_spin.setFixedWidth(150)
         self.rate_spin.setStyleSheet("padding: 4px 8px;")
         self.rate_spin.valueChanged.connect(self._recalc)
+        self.rate_spin.installEventFilter(self)
         detail_layout.addRow("Rate per Kg:", self.rate_spin)
 
         self.amount_label = QLabel(" 0.00")
@@ -175,6 +177,7 @@ class BillingWindow(QWidget):
             QPushButton:hover { background: #303f9f; }
         """)
         save_btn.clicked.connect(self._save_bill)
+        save_btn.setDefault(True)
         btn_layout.addWidget(save_btn)
 
         clear_btn = QPushButton("Clear")
@@ -240,15 +243,6 @@ class BillingWindow(QWidget):
             self._load_customers()
             self.cust_search.setFocus()
 
-    def _select_customer_from_search(self):
-        """Select current combo item and move to vehicle field."""
-        idx = self.cust_combo.currentIndex()
-        if idx >= 0:
-            self._on_customer_selected()
-            self.vehicle_no.setFocus()
-        else:
-            self.cust_combo.showPopup()
-
     def eventFilter(self, obj, event):
         if obj == self.cust_search and event.type() == QEvent.KeyPress:
             if event.key() == Qt.Key_Down:
@@ -263,8 +257,10 @@ class BillingWindow(QWidget):
                     self.cust_combo.setCurrentIndex(idx - 1)
                 self.cust_combo.showPopup()
                 return True
-            elif event.key() in (Qt.Key_Return, Qt.Key_Enter):
-                self._select_customer_from_search()
+        if event.type() == QEvent.KeyPress and event.key() in (Qt.Key_Return, Qt.Key_Enter):
+            if obj in (self.cust_search, self.vehicle_no, self.gross_weight,
+                       self.tare_weight, self.rate_spin):
+                self._save_bill()
                 return True
         return super().eventFilter(obj, event)
 
