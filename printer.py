@@ -755,8 +755,8 @@ def generate_statement_pdf(
     elements.append(Spacer(1, 4*mm))
 
     # Transaction table
-    hdr = ["Date", "Description", "Vehicle", "Net Wt", "Amount", "Received", "Balance"]
-    cw = [22*mm, 34*mm, 24*mm, 20*mm, 24*mm, 24*mm, 24*mm]
+    hdr = ["Date", "Description", "Vehicle", "Gross", "Tare", "Net Wt", "Amount", "Received", "Balance"]
+    cw = [20*mm, 30*mm, 20*mm, 18*mm, 18*mm, 18*mm, 22*mm, 22*mm, 22*mm]
 
     data = [hdr]
 
@@ -765,7 +765,7 @@ def generate_statement_pdf(
         "",
         Paragraph("<b>Opening Balance</b>",
                    ParagraphStyle("OB", fontName=FONT_NAME, fontSize=8)),
-        "", "", "", "",
+        "", "", "", "", "", "",
         f"{stmt['opening_balance']:,.2f}",
     ])
 
@@ -774,30 +774,34 @@ def generate_statement_pdf(
     for t in stmt["transactions"]:
         if t["type"] == "Bill":
             desc = f"Sale - {t['ref_no']}"
-            vehicle = t.get("vehicle_no", "")
-            net_wt = f"{t.get('net_weight', 0):,.2f}"
-            amount = f"{t['debit']:,.2f}"
-            received = ""
+            data.append([
+                t["tx_date"], desc,
+                t.get("vehicle_no", ""),
+                f"{t.get('gross_weight', 0):,.2f}",
+                f"{t.get('tare_weight', 0):,.2f}",
+                f"{t.get('net_weight', 0):,.2f}",
+                f"{t['debit']:,.2f}",
+                "",
+                f"{t['balance']:,.2f}",
+            ])
             total_sale += t["debit"]
         else:
             desc = f"Payment - {t['ref_no']}"
-            vehicle = ""
-            net_wt = ""
-            amount = ""
-            received = f"{t['credit']:,.2f}"
+            data.append([
+                t["tx_date"], desc,
+                "", "", "", "", "",
+                f"{t['credit']:,.2f}",
+                f"{t['balance']:,.2f}",
+            ])
             total_recv += t["credit"]
-        data.append([
-            t["tx_date"], desc, vehicle, net_wt, amount, received,
-            f"{t['balance']:,.2f}",
-        ])
 
     # Totals row
-    data.append(["", "", "", "", "", "", ""])
+    data.append(["", "", "", "", "", "", "", "", ""])
     data.append([
         "",
         Paragraph("<b>Total</b>",
                    ParagraphStyle("TTL", fontName=FONT_NAME, fontSize=9)),
-        "", "",
+        "", "", "", "",
         f"{total_sale:,.2f}" if total_sale else "",
         f"{total_recv:,.2f}" if total_recv else "",
         "",

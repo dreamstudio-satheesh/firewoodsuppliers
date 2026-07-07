@@ -217,9 +217,9 @@ class CustomerStatementTab(QWidget):
         layout.addSpacing(8)
 
         self.table = QTableWidget()
-        self.table.setColumnCount(7)
+        self.table.setColumnCount(9)
         self.table.setHorizontalHeaderLabels(
-            ["Date", "Description", "Vehicle", "Net Wt", "Amount", "Received", "Balance"]
+            ["Date", "Description", "Vehicle", "Gross Wt", "Tare Wt", "Net Wt", "Amount", "Received", "Balance"]
         )
         self.table.setAlternatingRowColors(True)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
@@ -239,12 +239,16 @@ class CustomerStatementTab(QWidget):
         h.setSectionResizeMode(4, QHeaderView.Interactive)
         h.setSectionResizeMode(5, QHeaderView.Interactive)
         h.setSectionResizeMode(6, QHeaderView.Interactive)
+        h.setSectionResizeMode(7, QHeaderView.Interactive)
+        h.setSectionResizeMode(8, QHeaderView.Interactive)
         h.resizeSection(0, 100)
-        h.resizeSection(2, 100)
+        h.resizeSection(2, 90)
         h.resizeSection(3, 80)
-        h.resizeSection(4, 100)
-        h.resizeSection(5, 100)
+        h.resizeSection(4, 80)
+        h.resizeSection(5, 80)
         h.resizeSection(6, 100)
+        h.resizeSection(7, 100)
+        h.resizeSection(8, 100)
         layout.addWidget(self.table)
 
         self._stmt_data = None
@@ -271,69 +275,61 @@ class CustomerStatementTab(QWidget):
 
         self.table.setRowCount(0)
 
+        def _right(val):
+            item = QTableWidgetItem(val)
+            item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            return item
+
+        def _bold(text):
+            item = QTableWidgetItem(text)
+            f = item.font()
+            f.setBold(True)
+            item.setFont(f)
+            return item
+
+        def _empty():
+            return QTableWidgetItem("")
+
         # Opening balance row
         row = self.table.rowCount()
         self.table.insertRow(row)
-        self.table.setItem(row, 0, QTableWidgetItem(""))
-        item = QTableWidgetItem("Opening Balance")
-        font = item.font()
-        font.setBold(True)
-        item.setFont(font)
-        self.table.setItem(row, 1, item)
-        self.table.setItem(row, 2, QTableWidgetItem(""))
-        self.table.setItem(row, 3, QTableWidgetItem(""))
-        self.table.setItem(row, 4, QTableWidgetItem(""))
-        self.table.setItem(row, 5, QTableWidgetItem(""))
-        item = QTableWidgetItem(f"{self._stmt_data['opening_balance']:,.2f}")
-        item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        self.table.setItem(row, 6, item)
+        self.table.setItem(row, 0, _empty())
+        self.table.setItem(row, 1, _bold("Opening Balance"))
+        for col in range(2, 8):
+            self.table.setItem(row, col, _empty())
+        self.table.setItem(row, 8, _right(f"{self._stmt_data['opening_balance']:,.2f}"))
 
         for t in self._stmt_data["transactions"]:
             row = self.table.rowCount()
             self.table.insertRow(row)
             self.table.setItem(row, 0, QTableWidgetItem(t["tx_date"]))
             if t["type"] == "Bill":
-                desc = f"Sale - {t['ref_no']}"
-                self.table.setItem(row, 1, QTableWidgetItem(desc))
+                self.table.setItem(row, 1, QTableWidgetItem(f"Sale - {t['ref_no']}"))
                 self.table.setItem(row, 2, QTableWidgetItem(t.get("vehicle_no", "")))
-                nw = QTableWidgetItem(f"{t.get('net_weight', 0):,.2f}")
-                nw.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-                self.table.setItem(row, 3, nw)
-                amt = QTableWidgetItem(f"{t['debit']:,.2f}")
-                amt.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-                self.table.setItem(row, 4, amt)
-                self.table.setItem(row, 5, QTableWidgetItem(""))
+                self.table.setItem(row, 3, _right(f"{t.get('gross_weight', 0):,.2f}"))
+                self.table.setItem(row, 4, _right(f"{t.get('tare_weight', 0):,.2f}"))
+                self.table.setItem(row, 5, _right(f"{t.get('net_weight', 0):,.2f}"))
+                self.table.setItem(row, 6, _right(f"{t['debit']:,.2f}"))
+                self.table.setItem(row, 7, _empty())
             else:
-                desc = f"Payment - {t['ref_no']}"
-                self.table.setItem(row, 1, QTableWidgetItem(desc))
-                self.table.setItem(row, 2, QTableWidgetItem(""))
-                self.table.setItem(row, 3, QTableWidgetItem(""))
-                self.table.setItem(row, 4, QTableWidgetItem(""))
-                rc = QTableWidgetItem(f"{t['credit']:,.2f}")
-                rc.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-                self.table.setItem(row, 5, rc)
-            b = QTableWidgetItem(f"{t['balance']:,.2f}")
-            b.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-            self.table.setItem(row, 6, b)
+                self.table.setItem(row, 1, QTableWidgetItem(f"Payment - {t['ref_no']}"))
+                for col in range(2, 7):
+                    self.table.setItem(row, col, _empty())
+                self.table.setItem(row, 7, _right(f"{t['credit']:,.2f}"))
+            self.table.setItem(row, 8, _right(f"{t['balance']:,.2f}"))
 
         # Closing balance
         row = self.table.rowCount()
         self.table.insertRow(row)
-        for col in range(7):
-            self.table.setItem(row, col, QTableWidgetItem(""))
+        for col in range(9):
+            self.table.setItem(row, col, _empty())
 
         row = self.table.rowCount()
         self.table.insertRow(row)
-        item = QTableWidgetItem("Closing Balance")
-        font = item.font()
-        font.setBold(True)
-        item.setFont(font)
-        self.table.setItem(row, 1, item)
-        for col in range(2, 6):
-            self.table.setItem(row, col, QTableWidgetItem(""))
-        item = QTableWidgetItem(f"{self._stmt_data['closing_balance']:,.2f}")
-        item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        self.table.setItem(row, 6, item)
+        self.table.setItem(row, 1, _bold("Closing Balance"))
+        for col in range(2, 8):
+            self.table.setItem(row, col, _empty())
+        self.table.setItem(row, 8, _right(f"{self._stmt_data['closing_balance']:,.2f}"))
 
     def _print_pdf(self):
         if not self._stmt_data:
