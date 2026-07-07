@@ -8,5 +8,4 @@ if not exist "venv" (
 ) else (
     call venv\Scripts\activate.bat
 )
-python main.py
-pause
+pythonw main.py
