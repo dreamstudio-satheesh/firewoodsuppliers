@@ -721,9 +721,11 @@ def generate_statement_pdf(
         ("LEFTPADDING", (0, 0), (-1, -1), 4),
     ]))
 
+    total_sale = sum(t['debit'] for t in stmt['transactions'])
+    total_recv = sum(t['credit'] for t in stmt['transactions'])
     right_rows = [
-        _info_pair("Total Bills", f"<b>{sum(t['debit'] for t in stmt['transactions']):,.2f}</b>"),
-        _info_pair("Total Received", f"<b>{sum(t['credit'] for t in stmt['transactions']):,.2f}</b>"),
+        _info_pair("Total Sales", f"<b>{total_sale:,.2f}</b>"),
+        _info_pair("Total Received", f"<b>{total_recv:,.2f}</b>"),
         _info_pair(
             "Closing Balance",
             f"<b>{stmt['closing_balance']:,.2f}</b>",
@@ -753,8 +755,8 @@ def generate_statement_pdf(
     elements.append(Spacer(1, 4*mm))
 
     # Transaction table
-    hdr = ["Date", "Description", "Debit", "Credit", "Balance"]
-    cw = [26*mm, 52*mm, 28*mm, 28*mm, 28*mm]
+    hdr = ["Date", "Description", "Vehicle", "Net Wt", "Amount", "Received", "Balance"]
+    cw = [22*mm, 34*mm, 24*mm, 20*mm, 24*mm, 24*mm, 24*mm]
 
     data = [hdr]
 
@@ -763,31 +765,41 @@ def generate_statement_pdf(
         "",
         Paragraph("<b>Opening Balance</b>",
                    ParagraphStyle("OB", fontName=FONT_NAME, fontSize=8)),
-        "",
-        "",
+        "", "", "", "",
         f"{stmt['opening_balance']:,.2f}",
     ])
 
+    total_sale = 0
+    total_recv = 0
     for t in stmt["transactions"]:
-        desc = f"{t['type']} {t['ref_no']}"
+        if t["type"] == "Bill":
+            desc = f"Sale - {t['ref_no']}"
+            vehicle = t.get("vehicle_no", "")
+            net_wt = f"{t.get('net_weight', 0):,.2f}"
+            amount = f"{t['debit']:,.2f}"
+            received = ""
+            total_sale += t["debit"]
+        else:
+            desc = f"Payment - {t['ref_no']}"
+            vehicle = ""
+            net_wt = ""
+            amount = ""
+            received = f"{t['credit']:,.2f}"
+            total_recv += t["credit"]
         data.append([
-            t["tx_date"],
-            desc,
-            f"{t['debit']:,.2f}" if t["debit"] else "",
-            f"{t['credit']:,.2f}" if t["credit"] else "",
+            t["tx_date"], desc, vehicle, net_wt, amount, received,
             f"{t['balance']:,.2f}",
         ])
 
     # Totals row
-    total_debit = sum(t["debit"] for t in stmt["transactions"])
-    total_credit = sum(t["credit"] for t in stmt["transactions"])
-    data.append(["", "", "", "", ""])
+    data.append(["", "", "", "", "", "", ""])
     data.append([
         "",
         Paragraph("<b>Total</b>",
                    ParagraphStyle("TTL", fontName=FONT_NAME, fontSize=9)),
-        f"{total_debit:,.2f}" if total_debit else "",
-        f"{total_credit:,.2f}" if total_credit else "",
+        "", "",
+        f"{total_sale:,.2f}" if total_sale else "",
+        f"{total_recv:,.2f}" if total_recv else "",
         "",
     ])
 
@@ -800,7 +812,7 @@ def generate_statement_pdf(
         ("FONTSIZE", (0, 1), (-1, -1), 7.5),
         ("FONTSIZE", (0, -1), (-1, -1), 10),
         ("ALIGN", (0, 0), (-1, 0), "CENTER"),
-        ("ALIGN", (2, 1), (-1, -1), "RIGHT"),
+        ("ALIGN", (3, 1), (-1, -1), "RIGHT"),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
         ("GRID", (0, 1), (-1, -3), 0.3, BORDER),
         ("LINEABOVE", (0, -2), (-1, -2), 0.6, NAVY),

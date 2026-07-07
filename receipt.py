@@ -3,12 +3,12 @@ from database import get_connection
 
 def create_receipt(
     receipt_no: str,
-    bill_no: str,
-    customer_id: int,
-    customer_name: str,
-    customer_mobile: str,
-    receipt_date: str,
-    amount: float,
+    bill_no: str = "",
+    customer_id: int = 0,
+    customer_name: str = "",
+    customer_mobile: str = "",
+    receipt_date: str = "",
+    amount: float = 0,
     amount_in_words: str = "",
     mode: str = "Cash",
     reference_no: str = "",

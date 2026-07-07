@@ -21,22 +21,22 @@ def get_customer(customer_id: int) -> dict | None:
     return dict(row) if row else None
 
 
-def add_customer(name: str, mobile: str = "", address: str = "") -> int:
+def add_customer(name: str, mobile: str = "", address: str = "", opening_balance: float = 0) -> int:
     conn = get_connection()
     cur = conn.execute(
-        "INSERT INTO customer (name, mobile, address) VALUES (?, ?, ?)",
-        (name.strip(), mobile.strip(), address.strip()),
+        "INSERT INTO customer (name, mobile, address, opening_balance) VALUES (?, ?, ?, ?)",
+        (name.strip(), mobile.strip(), address.strip(), opening_balance),
     )
     conn.commit()
     return cur.lastrowid
 
 
-def update_customer(customer_id: int, name: str, mobile: str = "", address: str = ""):
+def update_customer(customer_id: int, name: str, mobile: str = "", address: str = "", opening_balance: float = 0):
     conn = get_connection()
     conn.execute(
-        """UPDATE customer SET name=?, mobile=?, address=?,
+        """UPDATE customer SET name=?, mobile=?, address=?, opening_balance=?,
            updated_at=CURRENT_TIMESTAMP WHERE id=?""",
-        (name.strip(), mobile.strip(), address.strip(), customer_id),
+        (name.strip(), mobile.strip(), address.strip(), opening_balance, customer_id),
     )
     conn.commit()
 
@@ -49,5 +49,5 @@ def delete_customer(customer_id: int):
 
 def get_all_customers() -> list[dict]:
     conn = get_connection()
-    rows = conn.execute("SELECT id, name, mobile FROM customer ORDER BY name").fetchall()
+    rows = conn.execute("SELECT id, name, mobile, opening_balance FROM customer ORDER BY name").fetchall()
     return [dict(r) for r in rows]

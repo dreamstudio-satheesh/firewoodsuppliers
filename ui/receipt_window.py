@@ -13,6 +13,7 @@ from receipt import (
     create_receipt, search_receipts, get_receipt, cancel_receipt,
 )
 from database import get_next_receipt_no
+from customer import search_customers, get_all_customers, get_customer
 from billing import search_sale_bills, get_sale_bill
 from printer import generate_receipt_pdf, open_pdf
 
@@ -170,55 +171,61 @@ class ReceiptWindow(QWidget):
 class CreateReceiptDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Create Receipt from Bill")
-        self.setMinimumWidth(550)
+        self.setWindowTitle("New Receipt")
+        self.setMinimumWidth(600)
         self.setModal(True)
 
+        self._customer = None
         self._bill_data = None
         layout = QVBoxLayout(self)
-        layout.setSpacing(12)
+        layout.setSpacing(10)
 
-        bill_group = QGroupBox("Select Bill")
-        bill_group.setStyleSheet("""
-            QGroupBox { font-weight: bold; border: 1px solid #ccc; border-radius: 6px;
-                        margin-top: 10px; padding-top: 16px; background: white; }
-            QGroupBox::title { subcontrol-origin: margin; left: 12px; padding: 0 6px; }
-        """)
-        bill_layout = QVBoxLayout(bill_group)
-        bill_search_layout = QHBoxLayout()
-        self.bill_search_input = QLineEdit()
-        self.bill_search_input.setPlaceholderText("Search by Bill No or Company...")
-        self.bill_search_input.setStyleSheet("padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px;")
-        self.bill_search_input.textChanged.connect(self._search_bills_ui)
-        bill_search_layout.addWidget(self.bill_search_input, 1)
-
-        self.bill_combo = QComboBox()
-        self.bill_combo.setMinimumWidth(350)
-        self.bill_combo.setStyleSheet("padding: 4px 8px;")
-        self.bill_combo.currentIndexChanged.connect(self._on_bill_selected)
-        bill_search_layout.addWidget(self.bill_combo)
-        bill_layout.addLayout(bill_search_layout)
-
-        self.bill_info_label = QLabel("<i>Select a bill</i>")
-        self.bill_info_label.setStyleSheet("color: #757575; padding: 4px;")
-        bill_layout.addWidget(self.bill_info_label)
-        layout.addWidget(bill_group)
-
-        rc_group = QGroupBox("Receipt Details")
-        rc_group.setStyleSheet(bill_group.styleSheet())
-        rc_layout = QFormLayout(rc_group)
-        rc_layout.setSpacing(8)
-
+        # Receipt info row
+        info_row = QHBoxLayout()
+        info_row.addWidget(QLabel("Receipt No:"))
         self.rc_no_label = QLabel("...")
         self.rc_no_label.setFont(QFont("Segoe UI", 12, QFont.Bold))
         self.rc_no_label.setStyleSheet("color: #1a237e;")
-        rc_layout.addRow("Receipt No:", self.rc_no_label)
-
+        info_row.addWidget(self.rc_no_label)
+        info_row.addStretch()
+        info_row.addWidget(QLabel("Date:"))
         self.rc_date = QDateEdit()
         self.rc_date.setCalendarPopup(True)
         self.rc_date.setDate(date.today())
         self.rc_date.setStyleSheet("padding: 4px 8px;")
-        rc_layout.addRow("Date:", self.rc_date)
+        info_row.addWidget(self.rc_date)
+        layout.addLayout(info_row)
+
+        # Customer selection
+        cust_group = QGroupBox("Customer")
+        cust_group.setStyleSheet("""
+            QGroupBox { font-weight: bold; border: 1px solid #ccc; border-radius: 6px;
+                        margin-top: 10px; padding-top: 16px; background: white; }
+            QGroupBox::title { subcontrol-origin: margin; left: 12px; padding: 0 6px; }
+        """)
+        cust_layout = QVBoxLayout(cust_group)
+        cust_search_row = QHBoxLayout()
+        self.cust_search = QLineEdit()
+        self.cust_search.setPlaceholderText("Search customer by name or mobile...")
+        self.cust_search.setStyleSheet("padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px;")
+        self.cust_search.textChanged.connect(self._search_customers_ui)
+        cust_search_row.addWidget(self.cust_search, 1)
+        self.cust_combo = QComboBox()
+        self.cust_combo.setMinimumWidth(300)
+        self.cust_combo.setStyleSheet("padding: 4px 8px;")
+        self.cust_combo.currentIndexChanged.connect(self._on_customer_selected)
+        cust_search_row.addWidget(self.cust_combo)
+        cust_layout.addLayout(cust_search_row)
+        self.cust_info = QLabel("<i>Select a customer</i>")
+        self.cust_info.setStyleSheet("color: #757575; padding: 4px;")
+        cust_layout.addWidget(self.cust_info)
+        layout.addWidget(cust_group)
+
+        # Payment details
+        pay_group = QGroupBox("Payment Details")
+        pay_group.setStyleSheet(cust_group.styleSheet())
+        pay_layout = QFormLayout(pay_group)
+        pay_layout.setSpacing(8)
 
         self.amount_spin = QDoubleSpinBox()
         self.amount_spin.setRange(0, 99999999)
@@ -226,25 +233,27 @@ class CreateReceiptDialog(QDialog):
         self.amount_spin.setPrefix("  ")
         self.amount_spin.setFixedWidth(200)
         self.amount_spin.setStyleSheet("padding: 4px 8px;")
-        rc_layout.addRow("Amount:", self.amount_spin)
+        self.amount_spin.valueChanged.connect(self._on_amount_change)
+        pay_layout.addRow("Amount:", self.amount_spin)
 
         self.mode_combo = QComboBox()
         self.mode_combo.addItems(["Cash", "Bank Transfer", "Cheque", "UPI", "Card", "Other"])
         self.mode_combo.setStyleSheet("padding: 4px 8px;")
-        rc_layout.addRow("Mode:", self.mode_combo)
+        pay_layout.addRow("Mode:", self.mode_combo)
 
         self.ref_no = QLineEdit()
         self.ref_no.setPlaceholderText("Cheque/Transaction/UPI ref (optional)")
-        self.ref_no.setStyleSheet("padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px;")
-        rc_layout.addRow("Reference No:", self.ref_no)
+        self.ref_no.setStyleSheet("padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px;")
+        pay_layout.addRow("Reference:", self.ref_no)
 
         self.notes_input = QLineEdit()
         self.notes_input.setPlaceholderText("Optional notes")
-        self.notes_input.setStyleSheet("padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px;")
-        rc_layout.addRow("Notes:", self.notes_input)
+        self.notes_input.setStyleSheet("padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px;")
+        pay_layout.addRow("Notes:", self.notes_input)
 
-        layout.addWidget(rc_group)
+        layout.addWidget(pay_group)
 
+        # Buttons
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
         self._save_btn = QPushButton("  Save Receipt")
@@ -270,66 +279,66 @@ class CreateReceiptDialog(QDialog):
         layout.addLayout(btn_layout)
 
         self._generate_rc_no()
-        self._search_bills_ui()
+        self._load_customers()
 
     def _generate_rc_no(self):
         self.rc_no = get_next_receipt_no("RC")
         self.rc_no_label.setText(self.rc_no)
 
-    def _search_bills_ui(self):
-        query = self.bill_search_input.text()
-        bills, _ = search_sale_bills(query, status="active")
-        self.bill_combo.blockSignals(True)
-        self.bill_combo.clear()
-        for bill in bills:
-            label = f"{bill['bill_no']}  —  {bill['customer_name']}  (  {bill['amount']:,.2f})"
-            self.bill_combo.addItem(label, bill["id"])
-        self.bill_combo.blockSignals(False)
-        self._on_bill_selected()
+    def _load_customers(self):
+        customers = get_all_customers()
+        self.cust_combo.clear()
+        for c in customers:
+            self.cust_combo.addItem(f"{c['name']}  |  {c.get('mobile', '')}", c["id"])
 
-    def _on_bill_selected(self):
-        idx = self.bill_combo.currentIndex()
+    def _search_customers_ui(self):
+        query = self.cust_search.text()
+        customers = search_customers(query)
+        self.cust_combo.blockSignals(True)
+        self.cust_combo.clear()
+        for c in customers:
+            self.cust_combo.addItem(f"{c['name']}  |  {c.get('mobile', '')}", c["id"])
+        self.cust_combo.blockSignals(False)
+        self._on_customer_selected()
+
+    def _on_customer_selected(self):
+        idx = self.cust_combo.currentIndex()
         if idx < 0:
-            self._bill_data = None
-            self.bill_info_label.setText("<i>Select a bill</i>")
-            self.amount_spin.setValue(0)
+            self._customer = None
+            self.cust_info.setText("<i>Select a customer</i>")
+            self.cust_info.setStyleSheet("color: #757575; padding: 4px;")
             self._save_btn.setEnabled(False)
             return
-
-        bill_id = self.bill_combo.itemData(idx)
-        bill = get_sale_bill(bill_id)
-        if not bill:
+        cid = self.cust_combo.itemData(idx)
+        c = get_customer(cid)
+        if not c:
             return
-
-        self._bill_data = bill
-        self.bill_info_label.setText(
-            f"Company: <b>{bill['customer_name']}</b>  |  "
-            f"Total:  {bill['amount']:,.2f}"
+        self._customer = c
+        self.cust_info.setText(
+            f"<b>{c['name']}</b>  |  Mobile: {c.get('mobile', '')}"
         )
-        self.bill_info_label.setStyleSheet("color: #1a237e; padding: 4px;")
-        self.amount_spin.setValue(bill["amount"])
-        self._save_btn.setEnabled(True)
+        self.cust_info.setStyleSheet("color: #1a237e; padding: 4px;")
+        if self.amount_spin.value() > 0:
+            self._save_btn.setEnabled(True)
+
+    def _on_amount_change(self, val):
+        self._save_btn.setEnabled(self._customer is not None and val > 0)
 
     def _save(self):
-        if not self._bill_data:
-            QMessageBox.warning(self, "Error", "Please select a bill.")
+        if not self._customer:
+            QMessageBox.warning(self, "Error", "Please select a customer.")
             return
-
-        bill = self._bill_data
         amount = self.amount_spin.value()
         if amount <= 0:
             QMessageBox.warning(self, "Error", "Amount must be greater than zero.")
             return
-
         words = self._amount_in_words(amount)
-
         try:
-            receipt_id = create_receipt(
+            create_receipt(
                 receipt_no=self.rc_no,
-                bill_no=bill["bill_no"],
-                customer_id=bill["customer_id"],
-                customer_name=bill["customer_name"],
-                customer_mobile=bill.get("customer_mobile", ""),
+                customer_id=self._customer["id"],
+                customer_name=self._customer["name"],
+                customer_mobile=self._customer.get("mobile", ""),
                 receipt_date=self.rc_date.date().toString("yyyy-MM-dd"),
                 amount=amount,
                 amount_in_words=words,

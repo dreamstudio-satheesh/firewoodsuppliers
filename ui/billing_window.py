@@ -79,9 +79,9 @@ class BillingWindow(QWidget):
         add_cust_btn.setToolTip("Add new company")
         add_cust_btn.setShortcut("Alt+A")
         add_cust_btn.setStyleSheet("""
-            QPushButton { background: #4caf50; color: white; font-weight: bold;
+            QPushButton { background: #4caf50; color: #1a237e; font-weight: bold;
                           border: none; border-radius: 4px; font-size: 16px; }
-            QPushButton:hover { background: #388e3c; }
+            QPushButton:hover { background: #388e3c; color: white; }
         """)
         add_cust_btn.clicked.connect(self._quick_add_customer)
         cust_layout.addWidget(add_cust_btn, 0, 2)

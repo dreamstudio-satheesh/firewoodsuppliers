@@ -2,6 +2,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QPushButton, QTableWidget, QTableWidgetItem, QHeaderView,
     QMessageBox, QDialog, QFormLayout, QDialogButtonBox,
+    QDoubleSpinBox,
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
@@ -38,6 +39,15 @@ class CustomerDialog(QDialog):
         self.address_edit.setStyleSheet("padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px;")
         form.addRow("Address:", self.address_edit)
 
+        self.balance_spin = QDoubleSpinBox()
+        self.balance_spin.setRange(-999999, 999999)
+        self.balance_spin.setDecimals(2)
+        self.balance_spin.setPrefix("  ")
+        self.balance_spin.setFixedWidth(160)
+        self.balance_spin.setStyleSheet("padding: 4px 8px;")
+        self.balance_spin.setToolTip("Positive = customer owes you, Negative = you owe customer")
+        form.addRow("Opening Balance:", self.balance_spin)
+
         layout.addLayout(form)
 
         if customer_id:
@@ -46,6 +56,7 @@ class CustomerDialog(QDialog):
                 self.name_edit.setText(c["name"])
                 self.mobile_edit.setText(c.get("mobile", ""))
                 self.address_edit.setText(c.get("address", ""))
+                self.balance_spin.setValue(c.get("opening_balance", 0))
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self._validate)
@@ -63,6 +74,7 @@ class CustomerDialog(QDialog):
             "name": self.name_edit.text().strip(),
             "mobile": self.mobile_edit.text().strip(),
             "address": self.address_edit.text().strip(),
+            "opening_balance": self.balance_spin.value(),
         }
 
 
@@ -101,9 +113,9 @@ class CustomerWindow(QWidget):
         layout.addSpacing(12)
 
         self.table = QTableWidget()
-        self.table.setColumnCount(6)
+        self.table.setColumnCount(7)
         self.table.setHorizontalHeaderLabels(
-            ["ID", "Name", "Mobile", "Address", "Added On", ""]
+            ["ID", "Name", "Mobile", "Address", "Opening Bal", "Added On", ""]
         )
         self.table.setAlternatingRowColors(True)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
@@ -133,7 +145,11 @@ class CustomerWindow(QWidget):
             self.table.setItem(row, 1, QTableWidgetItem(c["name"]))
             self.table.setItem(row, 2, QTableWidgetItem(c.get("mobile", "")))
             self.table.setItem(row, 3, QTableWidgetItem(c.get("address", "")))
-            self.table.setItem(row, 4, QTableWidgetItem(c.get("created_at", "")[:10]))
+            bal = c.get("opening_balance", 0)
+            bal_item = QTableWidgetItem(f"{bal:,.2f}")
+            bal_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            self.table.setItem(row, 4, bal_item)
+            self.table.setItem(row, 5, QTableWidgetItem(c.get("created_at", "")[:10]))
 
             action_w = QWidget()
             action_layout = QHBoxLayout(action_w)
@@ -153,7 +169,7 @@ class CustomerWindow(QWidget):
             del_btn.clicked.connect(lambda checked, cid=cid: self._delete_customer(cid))
             action_layout.addWidget(del_btn)
 
-            self.table.setCellWidget(row, 5, action_w)
+            self.table.setCellWidget(row, 6, action_w)
 
     def _add_customer(self):
         dialog = CustomerDialog(0, self)

@@ -65,6 +65,7 @@ def init_db():
             name TEXT NOT NULL,
             mobile TEXT DEFAULT '',
             address TEXT DEFAULT '',
+            opening_balance REAL NOT NULL DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );

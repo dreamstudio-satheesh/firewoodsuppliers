@@ -5,12 +5,12 @@ from datetime import date
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QTableWidget, QTableWidgetItem, QHeaderView, QDateEdit,
-    QTabWidget, QMessageBox, QRadioButton, QComboBox,
+    QTabWidget, QMessageBox, QComboBox,
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 
-from reports import sales_register
+from reports import sales_register, sales_detail
 from customer import get_all_customers
 from exporter import export_csv, export_xlsx, export_pdf_table
 from printer import open_pdf, generate_statement_pdf
@@ -157,46 +157,10 @@ class ReportTab(QWidget):
 
 class SalesRegisterTab(ReportTab):
     def __init__(self, parent=None):
-        self._period = "day"
-
-        cols = ["Date", "Bills", "Total Amount ()"]
-        keys = ["period", "bill_count", "total"]
-
-        self.day_radio = QRadioButton("Day-wise")
-        self.day_radio.setChecked(True)
-        self.month_radio = QRadioButton("Month-wise")
-
-        super().__init__(cols, keys, sales_register, "Sales Register", parent)
-
-        self._extra_widgets = [QLabel("Group:"), self.day_radio, self.month_radio]
-
-        self.day_radio.clicked.connect(self._on_period_change)
-        self.month_radio.clicked.connect(self._on_period_change)
-
-    def _on_period_change(self):
-        self._period = "month" if self.month_radio.isChecked() else "day"
-        self._refresh()
-
-    def _refresh(self):
-        from_date = self.date_from.date().toString("yyyy-MM-dd")
-        to_date = self.date_to.date().toString("yyyy-MM-dd")
-        try:
-            self._data = sales_register(from_date, to_date, self._period)
-        except Exception as e:
-            QMessageBox.warning(self, "Error", str(e))
-            self._data = []
-
-        self.table.setRowCount(0)
-        for row_data in self._data:
-            row = self.table.rowCount()
-            self.table.insertRow(row)
-            for col_idx, key in enumerate(self._column_keys):
-                val = row_data.get(key, "")
-                text = str(val) if not isinstance(val, float) else f"{val:,.2f}"
-                item = QTableWidgetItem(text)
-                if isinstance(val, (int, float)):
-                    item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-                self.table.setItem(row, col_idx, item)
+        cols = ["Date", "Bill No", "Customer", "Vehicle", "Gross", "Tare", "Net Wt", "Amount"]
+        keys = ["bill_date", "bill_no", "customer_name", "vehicle_no",
+                "gross_weight", "tare_weight", "net_weight", "amount"]
+        super().__init__(cols, keys, sales_detail, "Sales Register", parent)
 
 
 class CustomerStatementTab(QWidget):
@@ -253,9 +217,9 @@ class CustomerStatementTab(QWidget):
         layout.addSpacing(8)
 
         self.table = QTableWidget()
-        self.table.setColumnCount(5)
+        self.table.setColumnCount(7)
         self.table.setHorizontalHeaderLabels(
-            ["Date", "Description", "Debit", "Credit", "Balance"]
+            ["Date", "Description", "Vehicle", "Net Wt", "Amount", "Received", "Balance"]
         )
         self.table.setAlternatingRowColors(True)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
@@ -273,10 +237,14 @@ class CustomerStatementTab(QWidget):
         h.setSectionResizeMode(2, QHeaderView.Interactive)
         h.setSectionResizeMode(3, QHeaderView.Interactive)
         h.setSectionResizeMode(4, QHeaderView.Interactive)
+        h.setSectionResizeMode(5, QHeaderView.Interactive)
+        h.setSectionResizeMode(6, QHeaderView.Interactive)
         h.resizeSection(0, 100)
         h.resizeSection(2, 100)
-        h.resizeSection(3, 100)
+        h.resizeSection(3, 80)
         h.resizeSection(4, 100)
+        h.resizeSection(5, 100)
+        h.resizeSection(6, 100)
         layout.addWidget(self.table)
 
         self._stmt_data = None
@@ -314,36 +282,45 @@ class CustomerStatementTab(QWidget):
         self.table.setItem(row, 1, item)
         self.table.setItem(row, 2, QTableWidgetItem(""))
         self.table.setItem(row, 3, QTableWidgetItem(""))
+        self.table.setItem(row, 4, QTableWidgetItem(""))
+        self.table.setItem(row, 5, QTableWidgetItem(""))
         item = QTableWidgetItem(f"{self._stmt_data['opening_balance']:,.2f}")
         item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        self.table.setItem(row, 4, item)
+        self.table.setItem(row, 6, item)
 
         for t in self._stmt_data["transactions"]:
             row = self.table.rowCount()
             self.table.insertRow(row)
             self.table.setItem(row, 0, QTableWidgetItem(t["tx_date"]))
-            desc = f"{t['type']} {t['ref_no']}"
-            self.table.setItem(row, 1, QTableWidgetItem(desc))
-            d = QTableWidgetItem(f"{t['debit']:,.2f}" if t["debit"] else "")
-            if t["debit"]:
-                d.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-            self.table.setItem(row, 2, d)
-            c = QTableWidgetItem(f"{t['credit']:,.2f}" if t["credit"] else "")
-            if t["credit"]:
-                c.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-            self.table.setItem(row, 3, c)
+            if t["type"] == "Bill":
+                desc = f"Sale - {t['ref_no']}"
+                self.table.setItem(row, 1, QTableWidgetItem(desc))
+                self.table.setItem(row, 2, QTableWidgetItem(t.get("vehicle_no", "")))
+                nw = QTableWidgetItem(f"{t.get('net_weight', 0):,.2f}")
+                nw.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                self.table.setItem(row, 3, nw)
+                amt = QTableWidgetItem(f"{t['debit']:,.2f}")
+                amt.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                self.table.setItem(row, 4, amt)
+                self.table.setItem(row, 5, QTableWidgetItem(""))
+            else:
+                desc = f"Payment - {t['ref_no']}"
+                self.table.setItem(row, 1, QTableWidgetItem(desc))
+                self.table.setItem(row, 2, QTableWidgetItem(""))
+                self.table.setItem(row, 3, QTableWidgetItem(""))
+                self.table.setItem(row, 4, QTableWidgetItem(""))
+                rc = QTableWidgetItem(f"{t['credit']:,.2f}")
+                rc.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                self.table.setItem(row, 5, rc)
             b = QTableWidgetItem(f"{t['balance']:,.2f}")
             b.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-            self.table.setItem(row, 4, b)
+            self.table.setItem(row, 6, b)
 
         # Closing balance
         row = self.table.rowCount()
         self.table.insertRow(row)
-        self.table.setItem(row, 0, QTableWidgetItem(""))
-        self.table.setItem(row, 1, QTableWidgetItem(""))
-        self.table.setItem(row, 2, QTableWidgetItem(""))
-        self.table.setItem(row, 3, QTableWidgetItem(""))
-        self.table.setItem(row, 4, QTableWidgetItem(""))
+        for col in range(7):
+            self.table.setItem(row, col, QTableWidgetItem(""))
 
         row = self.table.rowCount()
         self.table.insertRow(row)
@@ -352,11 +329,11 @@ class CustomerStatementTab(QWidget):
         font.setBold(True)
         item.setFont(font)
         self.table.setItem(row, 1, item)
-        self.table.setItem(row, 2, QTableWidgetItem(""))
-        self.table.setItem(row, 3, QTableWidgetItem(""))
+        for col in range(2, 6):
+            self.table.setItem(row, col, QTableWidgetItem(""))
         item = QTableWidgetItem(f"{self._stmt_data['closing_balance']:,.2f}")
         item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        self.table.setItem(row, 4, item)
+        self.table.setItem(row, 6, item)
 
     def _print_pdf(self):
         if not self._stmt_data:
@@ -399,11 +376,11 @@ class ReportsWindow(QWidget):
             QTabBar::tab:selected { background: #3f51b5; color: white; }
         """)
 
-        self.sales_tab = SalesRegisterTab()
         self.statement_tab = CustomerStatementTab()
+        self.sales_tab = SalesRegisterTab()
 
-        self.tabs.addTab(self.sales_tab, "  Sales Register")
         self.tabs.addTab(self.statement_tab, "  Customer Statement")
+        self.tabs.addTab(self.sales_tab, "  Sales Register")
 
         layout.addWidget(self.tabs)
 

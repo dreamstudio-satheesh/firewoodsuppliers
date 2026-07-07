@@ -6,24 +6,16 @@ def get_customer_statement(
 ) -> dict:
     conn = get_connection()
 
-    # Opening balance: all bills and receipts before date_from
-    billed_before = conn.execute(
-        """SELECT COALESCE(SUM(amount), 0) FROM sale_bill
-           WHERE customer_id=? AND bill_date < ? AND status='active'""",
-        (customer_id, date_from),
-    ).fetchone()[0]
-
-    received_before = conn.execute(
-        """SELECT COALESCE(SUM(amount), 0) FROM receipt
-           WHERE customer_id=? AND receipt_date < ? AND status='active'""",
-        (customer_id, date_from),
-    ).fetchone()[0]
-
-    opening_balance = billed_before - received_before
+    # Opening balance from customer record
+    cust = conn.execute(
+        "SELECT opening_balance FROM customer WHERE id=?", (customer_id,)
+    ).fetchone()
+    opening_balance = cust["opening_balance"] if cust else 0
 
     # All transactions (bills + receipts) in date range, sorted by date
     bills = conn.execute(
         """SELECT bill_date AS tx_date, bill_no AS ref_no, 'Bill' AS type,
+                  vehicle_no, gross_weight, tare_weight, net_weight,
                   amount AS debit, 0 AS credit
            FROM sale_bill
            WHERE customer_id=? AND bill_date BETWEEN ? AND ? AND status='active'""",
@@ -32,6 +24,7 @@ def get_customer_statement(
 
     receipts = conn.execute(
         """SELECT receipt_date AS tx_date, receipt_no AS ref_no, 'Receipt' AS type,
+                  '' AS vehicle_no, 0 AS gross_weight, 0 AS tare_weight, 0 AS net_weight,
                   0 AS debit, amount AS credit
            FROM receipt
            WHERE customer_id=? AND receipt_date BETWEEN ? AND ? AND status='active'""",
@@ -94,6 +87,19 @@ def customer_sales_report(customer_id: int) -> list[dict]:
         """SELECT bill_no, bill_date, amount, status
            FROM sale_bill WHERE customer_id=? ORDER BY id DESC""",
         (customer_id,),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def sales_detail(from_date: str, to_date: str) -> list[dict]:
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT bill_date, bill_no, customer_name, vehicle_no,
+                  gross_weight, tare_weight, net_weight, amount
+           FROM sale_bill
+           WHERE bill_date BETWEEN ? AND ? AND status='active'
+           ORDER BY bill_date, id""",
+        (from_date, to_date),
     ).fetchall()
     return [dict(r) for r in rows]
 
