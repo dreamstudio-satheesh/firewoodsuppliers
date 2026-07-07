@@ -1,0 +1,9 @@
+#!/usr/bin/env xdg-open
+[Desktop Entry]
+Name=Firewood Billing
+Comment=Firewood Seller Billing Software
+Exec=/home/satheesh/WORK/FirewoodBilling/run.sh
+Path=/home/satheesh/WORK/FirewoodBilling
+Terminal=false
+Type=Application
+Categories=Office;Finance;
