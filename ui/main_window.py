@@ -383,12 +383,6 @@ class MainWindow(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Backup Failed", str(e))
 
-    def showEvent(self, event):
-        super().showEvent(event)
-        if not hasattr(self, '_maximized'):
-            self._maximized = True
-            self.showMaximized()
-
     def closeEvent(self, event):
         close()
         event.accept()
