@@ -8,6 +8,9 @@
 2. **Python 3.12+** — [Download](https://www.python.org/downloads/)
    - **IMPORTANT**: Check **"Add Python to PATH"** during installation
 
+3. **Microsoft Visual C++ Redistributable** — [Download](https://aka.ms/vs/17/release/vc_redist.x64.exe)
+   - Required by PySide6 (Qt) on Windows. Install if you see DLL errors.
+
 ## Install
 
 Open **Git Bash** or **Command Prompt** and run:
@@ -42,6 +45,18 @@ run.vbs
 ```
 
 Git pull fetches latest changes; `run.vbs` handles the rest.
+
+## Build standalone EXE (no Python needed on client PC)
+
+On a Windows PC **with Python installed**, run once:
+
+```batch
+cd C:\firewoodsuppliers
+build_exe.bat
+```
+
+This creates `dist\FirewoodBilling.exe` — a single .exe that runs without Python.
+Copy `dist\FirewoodBilling.exe` to any Windows PC and double-click to run.
 
 ## Uninstall
 
