@@ -54,13 +54,13 @@ class ReceiptWindow(QWidget):
 
         toolbar.addStretch()
 
-        create_btn = QPushButton("+ Create Receipt (Alt+A)")
+        create_btn = QPushButton("+ Create Receipt (Ctrl+A)")
         create_btn.setStyleSheet("""
             QPushButton { background: #4caf50; color: white; padding: 8px 20px;
                           border: none; border-radius: 4px; font-weight: bold; }
             QPushButton:hover { background: #388e3c; }
         """)
-        create_btn.setShortcut("Alt+A")
+        create_btn.setShortcut("Ctrl+A")
         create_btn.clicked.connect(self._open_create_dialog)
         toolbar.addWidget(create_btn)
 
@@ -185,7 +185,6 @@ class CreateReceiptDialog(QDialog):
         info_row.addStretch()
         info_row.addWidget(QLabel("Date:"))
         self.rc_date = QDateEdit()
-        self.rc_date.setCalendarPopup(True)
         self.rc_date.setDate(date.today())
         self.rc_date.setStyleSheet("padding: 4px 8px;")
         info_row.addWidget(self.rc_date)
@@ -281,6 +280,7 @@ class CreateReceiptDialog(QDialog):
 
         self._generate_rc_no()
         self._load_customers()
+        self.cust_search.setFocus()
 
     def _generate_rc_no(self):
         self.rc_no = get_next_receipt_no("RC")

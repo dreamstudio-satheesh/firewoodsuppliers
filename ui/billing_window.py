@@ -74,9 +74,9 @@ class BillingWindow(QWidget):
         self.cust_search.installEventFilter(self)
         cust_layout.addWidget(self.cust_search, 0, 0)
 
-        add_cust_btn = QPushButton("Add Company (Alt+A)")
+        add_cust_btn = QPushButton("Add Company (Ctrl+A)")
         add_cust_btn.setToolTip("Add new company")
-        add_cust_btn.setShortcut("Alt+A")
+        add_cust_btn.setShortcut("Ctrl+A")
         add_cust_btn.setStyleSheet("""
             QPushButton { background: #4caf50; color: #1a237e; font-weight: bold;
                           border: none; border-radius: 4px; font-size: 13px; padding: 6px 14px; }
