@@ -245,6 +245,7 @@ class BillingWindow(QWidget):
                     break
             self.cust_search.clear()
             self._on_customer_selected()
+            self.vehicle_no.setFocus()
 
     def eventFilter(self, obj, event):
         if obj == self.cust_search and event.type() == QEvent.KeyPress:
