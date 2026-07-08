@@ -731,7 +731,7 @@ def generate_statement_pdf(
             f"<b>{stmt['closing_balance']:,.2f}</b>",
         ),
     ]
-    right_tbl = Table(right_rows, colWidths=[26*mm, 62*mm])
+    right_tbl = Table(right_rows, colWidths=[30*mm, 58*mm])
     right_tbl.setStyle(TableStyle([
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ("TOPPADDING", (0, 0), (-1, -1), 1),
