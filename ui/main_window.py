@@ -204,6 +204,8 @@ class MainWindow(QMainWindow):
             self.receipt_window.refresh_list()
         elif btn.page_index == 5:
             self.blank_invoice_window.refresh_for_new()
+        elif btn.page_index == 6:
+            self._refresh_settings()
 
     def _build_dashboard(self):
         w = QWidget()
@@ -367,15 +369,31 @@ class MainWindow(QMainWindow):
         return w
 
     def _save_settings(self):
-        data = {}
+        try:
+            data = {}
+            for key, wgt in self.settings_fields.items():
+                if isinstance(wgt, QTextEdit):
+                    data[key] = wgt.toPlainText()
+                else:
+                    data[key] = wgt.text()
+            save_company(data)
+            set_db_setting("terms", self.terms_edit.toPlainText())
+            QMessageBox.information(self, "Saved", "Company settings saved successfully.")
+        except Exception as e:
+            QMessageBox.critical(self, "Save Error", f"Failed to save settings:\n{e}")
+
+    def _refresh_settings(self):
+        company = get_company()
         for key, wgt in self.settings_fields.items():
+            val = company.get(key, "")
             if isinstance(wgt, QTextEdit):
-                data[key] = wgt.toPlainText()
+                wgt.setPlainText(val)
             else:
-                data[key] = wgt.text()
-        save_company(data)
-        set_db_setting("terms", self.terms_edit.toPlainText())
-        QMessageBox.information(self, "Saved", "Company settings saved successfully.")
+                wgt.setText(val)
+        self.terms_edit.setPlainText(get_db_setting("terms",
+            "1. All disputes subject to local jurisdiction.\n"
+            "2. Payment due within 15 days from bill date.\n"
+            "3. Goods once sold will not be taken back."))
 
     def _backup_db(self):
         try:

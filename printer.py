@@ -754,6 +754,11 @@ def generate_statement_pdf(
     elements.append(info_table)
     elements.append(Spacer(1, 4*mm))
 
+    def _short_ref(ref: str) -> str:
+        """Strip BL/2026/ or RC/2026/ prefix, keep only the number."""
+        parts = ref.split("/")
+        return parts[-1] if len(parts) > 1 else ref
+
     # Transaction table
     hdr = ["Date", "Description", "Vehicle", "Gross", "Tare", "Net Wt", "Amount", "Received", "Balance"]
     cw = [20*mm, 30*mm, 20*mm, 18*mm, 18*mm, 18*mm, 22*mm, 22*mm, 22*mm]
@@ -764,7 +769,7 @@ def generate_statement_pdf(
     data.append([
         "",
         Paragraph("<b>Opening Balance</b>",
-                   ParagraphStyle("OB", fontName=FONT_NAME, fontSize=8)),
+                   ParagraphStyle("OB", fontName=FONT_NAME, fontSize=9)),
         "", "", "", "", "", "",
         f"{stmt['opening_balance']:,.2f}",
     ])
@@ -773,7 +778,7 @@ def generate_statement_pdf(
     total_recv = 0
     for t in stmt["transactions"]:
         if t["type"] == "Bill":
-            desc = f"Sale - {t['ref_no']}"
+            desc = f"Sale - {_short_ref(t['ref_no'])}"
             data.append([
                 t["tx_date"], desc,
                 t.get("vehicle_no", ""),
@@ -786,7 +791,7 @@ def generate_statement_pdf(
             ])
             total_sale += t["debit"]
         else:
-            desc = f"Payment - {t['ref_no']}"
+            desc = f"Payment - {_short_ref(t['ref_no'])}"
             data.append([
                 t["tx_date"], desc,
                 "", "", "", "", "",
@@ -800,7 +805,7 @@ def generate_statement_pdf(
     data.append([
         "",
         Paragraph("<b>Total</b>",
-                   ParagraphStyle("TTL", fontName=FONT_NAME, fontSize=9)),
+                   ParagraphStyle("TTL", fontName=FONT_NAME, fontSize=10)),
         "", "", "", "",
         f"{total_sale:,.2f}" if total_sale else "",
         f"{total_recv:,.2f}" if total_recv else "",
@@ -812,9 +817,9 @@ def generate_statement_pdf(
         ("BACKGROUND", (0, 0), (-1, 0), NAVY),
         ("TEXTCOLOR", (0, 0), (-1, 0), WHITE),
         ("FONTNAME", (0, 0), (-1, -1), FONT_NAME),
-        ("FONTSIZE", (0, 0), (-1, 0), 9),
-        ("FONTSIZE", (0, 1), (-1, -1), 9),
-        ("FONTSIZE", (0, -1), (-1, -1), 11),
+        ("FONTSIZE", (0, 0), (-1, 0), 10),
+        ("FONTSIZE", (0, 1), (-1, -1), 10),
+        ("FONTSIZE", (0, -1), (-1, -1), 12),
         ("ALIGN", (0, 0), (-1, 0), "CENTER"),
         ("ALIGN", (3, 1), (-1, -1), "RIGHT"),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
@@ -823,8 +828,8 @@ def generate_statement_pdf(
         ("LINEABOVE", (0, -1), (-1, -1), 1.0, NAVY),
         ("BACKGROUND", (0, -1), (-1, -1), LIGHT_NAVY),
         ("BACKGROUND", (0, 1), (-1, 1), LIGHT_GREY),
-        ("TOPPADDING", (0, 0), (-1, -1), 3),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+        ("TOPPADDING", (0, 0), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
         ("LEFTPADDING", (0, 0), (-1, -1), 3),
         ("RIGHTPADDING", (0, 0), (-1, -1), 3),
     ]

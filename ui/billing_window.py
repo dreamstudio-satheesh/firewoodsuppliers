@@ -72,19 +72,18 @@ class BillingWindow(QWidget):
         self.cust_search.setStyleSheet("padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px;")
         self.cust_search.textChanged.connect(self._search_customers_ui)
         self.cust_search.installEventFilter(self)
-        cust_layout.addWidget(self.cust_search, 0, 0, 1, 2)
+        cust_layout.addWidget(self.cust_search, 0, 0)
 
-        add_cust_btn = QPushButton("+")
-        add_cust_btn.setFixedSize(32, 32)
+        add_cust_btn = QPushButton("Add Company (Alt+A)")
         add_cust_btn.setToolTip("Add new company")
         add_cust_btn.setShortcut("Alt+A")
         add_cust_btn.setStyleSheet("""
             QPushButton { background: #4caf50; color: #1a237e; font-weight: bold;
-                          border: none; border-radius: 4px; font-size: 16px; }
+                          border: none; border-radius: 4px; font-size: 13px; padding: 6px 14px; }
             QPushButton:hover { background: #388e3c; color: white; }
         """)
         add_cust_btn.clicked.connect(self._quick_add_customer)
-        cust_layout.addWidget(add_cust_btn, 0, 2)
+        cust_layout.addWidget(add_cust_btn, 0, 1)
 
         self.cust_combo = QComboBox()
         self.cust_combo.setMinimumWidth(300)
@@ -95,11 +94,11 @@ class BillingWindow(QWidget):
                 selection-color: white; outline: none;
             }
         """)
-        cust_layout.addWidget(self.cust_combo, 1, 0)
+        cust_layout.addWidget(self.cust_combo, 1, 0, 1, 2)
 
         self.cust_mobile_label = QLabel("")
         self.cust_mobile_label.setStyleSheet("color: #555;")
-        cust_layout.addWidget(self.cust_mobile_label, 2, 0)
+        cust_layout.addWidget(self.cust_mobile_label, 2, 0, 1, 2)
 
         layout.addWidget(cust_group)
         layout.addSpacing(8)
@@ -199,7 +198,6 @@ class BillingWindow(QWidget):
         self._on_customer_selected()
 
         # Tab order for fast keyboard entry
-        self.setTabOrder(self.date_edit, self.cust_search)
         self.setTabOrder(self.cust_search, self.vehicle_no)
         self.setTabOrder(self.vehicle_no, self.gross_weight)
         self.setTabOrder(self.gross_weight, self.tare_weight)
@@ -367,13 +365,14 @@ class BillingWindow(QWidget):
         self.rate_spin.setValue(0)
         self.amount_label.setText(" 0.00")
         self.vehicle_no.clear()
+        self.cust_search.clear()
         self._generate_bill_no()
-        self.date_edit.setFocus()
+        self.cust_search.setFocus()
 
     def refresh_for_new(self):
         self._clear_form()
         self._load_customers()
-        self.date_edit.setFocus()
+        self.cust_search.setFocus()
 
     def _build_list_ui(self, layout: QVBoxLayout):
         header = QLabel("Bills List")

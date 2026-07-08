@@ -52,20 +52,15 @@ class ReceiptWindow(QWidget):
         toolbar.addWidget(QLabel("To:"))
         toolbar.addWidget(self.list_date_to)
 
-        refresh_btn = QPushButton("  ")
-        refresh_btn.setFixedWidth(36)
-        refresh_btn.clicked.connect(self._search)
-        toolbar.addWidget(refresh_btn)
-
         toolbar.addStretch()
 
-        create_btn = QPushButton("+ Create Receipt (Alt+R)")
+        create_btn = QPushButton("+ Create Receipt (Alt+A)")
         create_btn.setStyleSheet("""
             QPushButton { background: #4caf50; color: white; padding: 8px 20px;
                           border: none; border-radius: 4px; font-weight: bold; }
             QPushButton:hover { background: #388e3c; }
         """)
-        create_btn.setShortcut("Alt+R")
+        create_btn.setShortcut("Alt+A")
         create_btn.clicked.connect(self._open_create_dialog)
         toolbar.addWidget(create_btn)
 
@@ -212,7 +207,13 @@ class CreateReceiptDialog(QDialog):
         cust_search_row.addWidget(self.cust_search, 1)
         self.cust_combo = QComboBox()
         self.cust_combo.setMinimumWidth(300)
-        self.cust_combo.setStyleSheet("padding: 4px 8px;")
+        self.cust_combo.setStyleSheet("""
+            QComboBox { padding: 4px 8px; color: #333; }
+            QComboBox QAbstractItemView {
+                color: #333; background: white; selection-background-color: #3f51b5;
+                selection-color: white; outline: none;
+            }
+        """)
         self.cust_combo.currentIndexChanged.connect(self._on_customer_selected)
         cust_search_row.addWidget(self.cust_combo)
         cust_layout.addLayout(cust_search_row)

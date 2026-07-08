@@ -177,7 +177,13 @@ class CustomerStatementTab(QWidget):
         row1.addWidget(QLabel("Customer:"))
         self.cust_combo = QComboBox()
         self.cust_combo.setMinimumWidth(250)
-        self.cust_combo.setStyleSheet("padding: 4px 8px;")
+        self.cust_combo.setStyleSheet("""
+            QComboBox { padding: 4px 8px; color: #333; }
+            QComboBox QAbstractItemView {
+                color: #333; background: white; selection-background-color: #3f51b5;
+                selection-color: white; outline: none;
+            }
+        """)
         row1.addWidget(self.cust_combo)
 
         row1.addWidget(QLabel("From:"))
@@ -347,7 +353,7 @@ class CustomerStatementTab(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Error", str(e))
 
-    def refresh(self):
+    def _refresh(self):
         self._load_customers()
         self._stmt_data = None
         self.table.setRowCount(0)
