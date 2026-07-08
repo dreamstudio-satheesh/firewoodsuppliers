@@ -937,33 +937,37 @@ def generate_receipt_pdf(receipt_id: int, output_path: str | None = None) -> str
     elements.append(info_table)
     elements.append(Spacer(1, 6*mm))
 
-    amt_label = Paragraph("<b>Amount Received</b>",
-                          ParagraphStyle("AmtLabel", fontName=FONT_NAME, fontSize=12,
-                                          alignment=TA_CENTER, textColor=NAVY))
-    amt_band = Table([[amt_label]], colWidths=[100*mm])
-    amt_band.setStyle(TableStyle([
+    words = rec.get("amount_in_words") or _amount_in_words(rec["amount"])
+    amt_data = [
+        [Paragraph("<b>Amount Received</b>",
+                    ParagraphStyle("AmtLabel", fontName=FONT_NAME, fontSize=12,
+                                    alignment=TA_CENTER, textColor=NAVY))],
+        [Paragraph(
+            f"Rs. {rec['amount']:,.2f}",
+            ParagraphStyle("BigAmt", fontName=FONT_NAME, fontSize=28,
+                            alignment=TA_CENTER, textColor=NAVY, leading=34),
+        )],
+        [Paragraph(
+            f"<i>{words}</i>",
+            ParagraphStyle("Words", fontName=FONT_NAME, fontSize=10,
+                            alignment=TA_CENTER, textColor=GREY, leading=14),
+        )],
+    ]
+    amt_tbl = Table(amt_data, colWidths=[160*mm])
+    amt_tbl.setStyle(TableStyle([
         ("ALIGN", (0, 0), (-1, -1), "CENTER"),
         ("BOX", (0, 0), (-1, -1), 1.5, NAVY),
-        ("TOPPADDING", (0, 0), (-1, -1), 8),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
-        ("BACKGROUND", (0, 0), (-1, -1), LIGHT_NAVY),
+        ("BACKGROUND", (0, 0), (0, 0), LIGHT_NAVY),
+        ("TOPPADDING", (0, 0), (0, 0), 8),
+        ("BOTTOMPADDING", (0, 0), (0, 0), 8),
+        ("TOPPADDING", (0, 1), (0, 2), 4),
+        ("BOTTOMPADDING", (0, 1), (0, 2), 4),
+        ("LINEBELOW", (0, 0), (0, 0), 0.5, NAVY),
     ]))
-    amt_wrap = Table([[amt_band]], colWidths=[176*mm])
+    amt_wrap = Table([[amt_tbl]], colWidths=[176*mm])
     amt_wrap.setStyle(TableStyle([("ALIGN", (0, 0), (-1, -1), "CENTER")]))
     elements.append(amt_wrap)
-    elements.append(Spacer(1, 2*mm))
-
-    elements.append(Paragraph(
-        f"₹ {rec['amount']:,.2f}",
-        ParagraphStyle("BigAmt", fontName=FONT_NAME, fontSize=28,
-                        alignment=TA_CENTER, textColor=NAVY, spaceBefore=2, spaceAfter=2),
-    ))
-    words = rec.get("amount_in_words") or _amount_in_words(rec["amount"])
-    elements.append(Paragraph(
-        f"<i>{words}</i>",
-        ParagraphStyle("Words", fontName=FONT_NAME, fontSize=10,
-                        alignment=TA_CENTER, textColor=GREY, spaceAfter=6*mm),
-    ))
+    elements.append(Spacer(1, 6*mm))
 
     if rec.get("notes"):
         nt = Table(
