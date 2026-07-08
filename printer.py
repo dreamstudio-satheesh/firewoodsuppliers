@@ -693,75 +693,76 @@ def generate_statement_pdf(
     elements = []
 
     elements.append(_header_block(company))
-    elements.append(Spacer(1, 3*mm))
+    elements.append(Spacer(1, 2*mm))
 
     elements.append(_title_band("CUSTOMER STATEMENT"))
-    elements.append(Spacer(1, 4*mm))
+    elements.append(Spacer(1, 3*mm))
 
-    # Info block
+    # Info block — two separate boxes side by side
+    total_sale = sum(t['debit'] for t in stmt['transactions'])
+    total_recv = sum(t['credit'] for t in stmt['transactions'])
+
     left_rows = [
         _info_pair("Customer", f"<b>{customer_name}</b>"),
         _info_pair("Period", f"<b>{date_from}</b> to <b>{date_to}</b>"),
-        _info_pair(
-            "Opening Balance",
-            f"<b>{stmt['opening_balance']:,.2f}</b>",
-        ),
+        _info_pair("Opening Balance", f"<b>{stmt['opening_balance']:,.2f}</b>"),
     ]
-    left_tbl = Table(left_rows, colWidths=[30*mm, 58*mm])
+    left_tbl = Table(left_rows, colWidths=[36*mm, 62*mm])
     left_tbl.setStyle(TableStyle([
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("TOPPADDING", (0, 0), (-1, -1), 1),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("ALIGN", (0, 0), (0, -1), "LEFT"),
+        ("ALIGN", (1, 0), (1, -1), "LEFT"),
+        ("TOPPADDING", (0, 0), (-1, -1), 2),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
     ]))
-    left_wrap = Table([[left_tbl]], colWidths=[88*mm])
+    left_wrap = Table([[left_tbl]], colWidths=[110*mm])
     left_wrap.setStyle(TableStyle([
         ("BOX", (0, 0), (-1, -1), 0.4, BORDER),
-        ("TOPPADDING", (0, 0), (-1, -1), 3),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("LEFTPADDING", (0, 0), (-1, -1), 6),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
     ]))
 
-    total_sale = sum(t['debit'] for t in stmt['transactions'])
-    total_recv = sum(t['credit'] for t in stmt['transactions'])
     right_rows = [
         _info_pair("Total Sales", f"<b>{total_sale:,.2f}</b>"),
         _info_pair("Total Received", f"<b>{total_recv:,.2f}</b>"),
-        _info_pair(
-            "Closing Balance",
-            f"<b>{stmt['closing_balance']:,.2f}</b>",
-        ),
+        _info_pair("Closing Balance", f"<b>{stmt['closing_balance']:,.2f}</b>"),
     ]
-    right_tbl = Table(right_rows, colWidths=[30*mm, 58*mm])
+    right_tbl = Table(right_rows, colWidths=[36*mm, 26*mm])
     right_tbl.setStyle(TableStyle([
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("TOPPADDING", (0, 0), (-1, -1), 1),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("ALIGN", (0, 0), (0, -1), "LEFT"),
+        ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+        ("TOPPADDING", (0, 0), (-1, -1), 2),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
     ]))
-    right_wrap = Table([[right_tbl]], colWidths=[88*mm])
+    right_wrap = Table([[right_tbl]], colWidths=[74*mm])
     right_wrap.setStyle(TableStyle([
         ("BOX", (0, 0), (-1, -1), 0.4, BORDER),
-        ("TOPPADDING", (0, 0), (-1, -1), 3),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("LEFTPADDING", (0, 0), (-1, -1), 6),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
     ]))
 
-    info_table = Table([[left_wrap, right_wrap]], colWidths=[88*mm, 88*mm])
+    info_table = Table([[left_wrap, "", right_wrap]], colWidths=[110*mm, 2*mm, 74*mm])
     info_table.setStyle(TableStyle([
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ("LEFTPADDING", (0, 0), (-1, -1), 0),
         ("RIGHTPADDING", (0, 0), (-1, -1), 0),
     ]))
     elements.append(info_table)
-    elements.append(Spacer(1, 4*mm))
+    elements.append(Spacer(1, 3*mm))
 
     def _short_ref(ref: str) -> str:
         """Strip BL/2026/ or RC/2026/ prefix, keep only the number."""
         parts = ref.split("/")
         return parts[-1] if len(parts) > 1 else ref
 
-    # Transaction table
+    # Transaction table — balanced column widths summing to 186mm
     hdr = ["Date", "Description", "Vehicle", "Gross", "Tare", "Net Wt", "Amount", "Received", "Balance"]
-    cw = [20*mm, 30*mm, 20*mm, 18*mm, 18*mm, 18*mm, 22*mm, 22*mm, 22*mm]
+    cw = [22*mm, 38*mm, 22*mm, 16*mm, 16*mm, 18*mm, 20*mm, 18*mm, 16*mm]
 
     data = [hdr]
 
@@ -769,7 +770,7 @@ def generate_statement_pdf(
     data.append([
         "",
         Paragraph("<b>Opening Balance</b>",
-                   ParagraphStyle("OB", fontName=FONT_NAME, fontSize=9)),
+                   ParagraphStyle("OB", fontName=FONT_NAME, fontSize=10)),
         "", "", "", "", "", "",
         f"{stmt['opening_balance']:,.2f}",
     ])
@@ -817,10 +818,13 @@ def generate_statement_pdf(
         ("BACKGROUND", (0, 0), (-1, 0), NAVY),
         ("TEXTCOLOR", (0, 0), (-1, 0), WHITE),
         ("FONTNAME", (0, 0), (-1, -1), FONT_NAME),
-        ("FONTSIZE", (0, 0), (-1, 0), 10),
-        ("FONTSIZE", (0, 1), (-1, -1), 10),
-        ("FONTSIZE", (0, -1), (-1, -1), 12),
+        ("FONTSIZE", (0, 0), (-1, 0), 9),
+        ("FONTSIZE", (0, 1), (-1, -1), 9),
+        ("FONTSIZE", (0, -1), (-1, -1), 11),
         ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+        ("ALIGN", (0, 1), (0, -1), "LEFT"),
+        ("ALIGN", (1, 1), (1, -1), "LEFT"),
+        ("ALIGN", (2, 1), (2, -1), "LEFT"),
         ("ALIGN", (3, 1), (-1, -1), "RIGHT"),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
         ("GRID", (0, 1), (-1, -3), 0.3, BORDER),
@@ -828,10 +832,12 @@ def generate_statement_pdf(
         ("LINEABOVE", (0, -1), (-1, -1), 1.0, NAVY),
         ("BACKGROUND", (0, -1), (-1, -1), LIGHT_NAVY),
         ("BACKGROUND", (0, 1), (-1, 1), LIGHT_GREY),
-        ("TOPPADDING", (0, 0), (-1, -1), 5),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-        ("LEFTPADDING", (0, 0), (-1, -1), 3),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 3),
+        ("TOPPADDING", (0, 0), (-1, 0), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, 0), 4),
+        ("TOPPADDING", (0, 1), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 1), (-1, -1), 4),
+        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
     ]
     tbl.setStyle(TableStyle(style_cmds))
     elements.append(tbl)
