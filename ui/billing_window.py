@@ -237,9 +237,14 @@ class BillingWindow(QWidget):
         dialog = CustomerDialog(0, self)
         if dialog.exec() == QDialog.Accepted:
             data = dialog.get_data()
-            add_customer(**data)
+            new_id = add_customer(**data)
             self._load_customers()
-            self.cust_search.setFocus()
+            for i in range(self.cust_combo.count()):
+                if self.cust_combo.itemData(i) == new_id:
+                    self.cust_combo.setCurrentIndex(i)
+                    break
+            self.cust_search.clear()
+            self._on_customer_selected()
 
     def eventFilter(self, obj, event):
         if obj == self.cust_search and event.type() == QEvent.KeyPress:
@@ -254,6 +259,9 @@ class BillingWindow(QWidget):
                 if idx > 0:
                     self.cust_combo.setCurrentIndex(idx - 1)
                 self.cust_combo.showPopup()
+                return True
+            elif event.key() == Qt.Key_A and event.modifiers() == Qt.ControlModifier:
+                self._quick_add_customer()
                 return True
         if event.type() == QEvent.KeyPress and event.key() in (Qt.Key_Return, Qt.Key_Enter):
             if obj in (self.cust_search, self.vehicle_no, self.gross_weight,
