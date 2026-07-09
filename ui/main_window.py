@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
     QGridLayout, QScrollArea,
 )
 from PySide6.QtCore import Qt, Signal, Slot, QSize
-from PySide6.QtGui import QFont, QIcon, QColor, QPalette, QAction
+from PySide6.QtGui import QFont, QIcon, QColor, QPalette, QAction, QShortcut, QKeySequence
 
 from billing import get_dashboard_data
 from database import backup_database, close
@@ -136,6 +136,16 @@ class MainWindow(QMainWindow):
         nav_scroll.setWidget(nav_container)
         sidebar_layout.addWidget(nav_scroll, 1)
 
+        # Keyboard shortcuts for sidebar navigation (Alt+ mnemonics don't work through scrollarea)
+        QShortcut(QKeySequence("Alt+L"), self, lambda: self._nav_to(3))
+        QShortcut(QKeySequence("Alt+D"), self, lambda: self._nav_to(0))
+        QShortcut(QKeySequence("Alt+C"), self, lambda: self._nav_to(1))
+        QShortcut(QKeySequence("Alt+N"), self, lambda: self._nav_to(2))
+        QShortcut(QKeySequence("Alt+R"), self, lambda: self._nav_to(4))
+        QShortcut(QKeySequence("Alt+T"), self, lambda: self._nav_to(5))
+        QShortcut(QKeySequence("Alt+B"), self, lambda: self._nav_to(6))
+        QShortcut(QKeySequence("Alt+S"), self, lambda: self._nav_to(7))
+
         backup_btn = QPushButton("  &Backup DB")
         backup_btn.setFixedHeight(44)
         backup_btn.setCursor(Qt.PointingHandCursor)
@@ -190,28 +200,38 @@ class MainWindow(QMainWindow):
         self.nav_buttons[0].setChecked(True)
         self.stack.setCurrentIndex(0)
 
+    def _nav_to(self, index: int):
+        """Programmatically navigate to a sidebar page by index."""
+        for b in self.nav_buttons:
+            b.setChecked(b.page_index == index)
+        self.stack.setCurrentIndex(index)
+        self._refresh_page(index)
+
+    def _refresh_page(self, index: int):
+        if index == 0:
+            self._refresh_dashboard()
+        elif index == 1:
+            self.customer_window._refresh()
+        elif index == 2:
+            self.billing_window.refresh_for_new()
+        elif index == 3:
+            self.bills_list_window.refresh_list()
+        elif index == 4:
+            self.reports_window.refresh()
+        elif index == 5:
+            self.receipt_window.refresh_list()
+        elif index == 6:
+            self.blank_invoice_window.refresh_for_new()
+        elif index == 7:
+            self._refresh_settings()
+
     def _on_nav_click(self):
         btn = self.sender()
         for b in self.nav_buttons:
             b.setChecked(b is btn)
-        self.stack.setCurrentIndex(btn.page_index)
-
-        if btn.page_index == 0:
-            self._refresh_dashboard()
-        elif btn.page_index == 1:
-            self.customer_window._refresh()
-        elif btn.page_index == 2:
-            self.billing_window.refresh_for_new()
-        elif btn.page_index == 3:
-            self.bills_list_window.refresh_list()
-        elif btn.page_index == 4:
-            self.reports_window.refresh()
-        elif btn.page_index == 5:
-            self.receipt_window.refresh_list()
-        elif btn.page_index == 6:
-            self.blank_invoice_window.refresh_for_new()
-        elif btn.page_index == 7:
-            self._refresh_settings()
+        idx = btn.page_index
+        self.stack.setCurrentIndex(idx)
+        self._refresh_page(idx)
 
     def _build_dashboard(self):
         w = QWidget()
