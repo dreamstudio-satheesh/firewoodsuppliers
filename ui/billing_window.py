@@ -402,7 +402,7 @@ class BillingWindow(QWidget):
 
         self.list_date_from = QDateEdit()
         self.list_date_from.setCalendarPopup(True)
-        self.list_date_from.setDate(date(date.today().year, date.today().month, 1))
+        self.list_date_from.setDate(date(2000, 1, 1))
         self.list_date_from.setStyleSheet("padding: 4px 8px;")
         search_layout.addWidget(QLabel("From:"))
         search_layout.addWidget(self.list_date_from)
@@ -414,8 +414,12 @@ class BillingWindow(QWidget):
         search_layout.addWidget(QLabel("To:"))
         search_layout.addWidget(self.list_date_to)
 
-        refresh_btn = QPushButton("  ")
-        refresh_btn.setFixedWidth(36)
+        refresh_btn = QPushButton("  Refresh")
+        refresh_btn.setStyleSheet("""
+            QPushButton { background: #3f51b5; color: white; padding: 6px 14px;
+                          border: none; border-radius: 4px; font-weight: bold; }
+            QPushButton:hover { background: #303f9f; }
+        """)
         refresh_btn.clicked.connect(self._search_refresh)
         search_layout.addWidget(refresh_btn)
 
@@ -547,9 +551,11 @@ class BillingWindow(QWidget):
         query = self.list_search.text()
         date_from = self.list_date_from.date().toString("yyyy-MM-dd")
         date_to = self.list_date_to.date().toString("yyyy-MM-dd")
-        bills, total = search_sale_bills(query, date_from, date_to, page=self._current_page)
+        bills, total = search_sale_bills(
+            query, date_from, date_to, page=self._current_page, page_size=100
+        )
 
-        self._total_pages = max(1, (total + 19) // 20)
+        self._total_pages = max(1, (total + 99) // 100)
         self.page_label.setText(f"Page {self._current_page} / {self._total_pages}")
         self.prev_btn.setEnabled(self._current_page > 1)
         self.next_btn.setEnabled(self._current_page < self._total_pages)
