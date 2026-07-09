@@ -81,6 +81,39 @@ def search_sale_bills(
     return [dict(r) for r in rows], total
 
 
+def update_sale_bill(
+    bill_id: int,
+    customer_id: int,
+    customer_name: str,
+    customer_mobile: str,
+    vehicle_no: str,
+    gross_weight: float,
+    tare_weight: float,
+    net_weight: float,
+    weight_unit: str,
+    rate: float,
+    amount: float,
+    bill_date: str,
+    product_name: str = "Firewood",
+    amount_in_words: str = "",
+    notes: str = "",
+):
+    conn = get_connection()
+    conn.execute(
+        """UPDATE sale_bill SET customer_id=?, customer_name=?, customer_mobile=?,
+           vehicle_no=?, product_name=?, gross_weight=?, tare_weight=?, net_weight=?,
+           weight_unit=?, rate=?, amount=?, bill_date=?, amount_in_words=?, notes=?
+           WHERE id=?""",
+        (
+            customer_id, customer_name, customer_mobile,
+            vehicle_no, product_name, gross_weight, tare_weight, net_weight,
+            weight_unit, rate, amount, bill_date, amount_in_words, notes,
+            bill_id,
+        ),
+    )
+    conn.commit()
+
+
 def cancel_sale_bill(bill_id: int):
     conn = get_connection()
     conn.execute("UPDATE sale_bill SET status='cancelled' WHERE id=?", (bill_id,))

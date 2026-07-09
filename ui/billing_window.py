@@ -14,9 +14,46 @@ from database import get_next_bill_no
 from ui.customer_window import CustomerDialog
 from billing import (
     create_sale_bill, search_sale_bills, get_sale_bill,
-    cancel_sale_bill, delete_sale_bill,
+    update_sale_bill, cancel_sale_bill, delete_sale_bill,
 )
 from printer import generate_bill_pdf, generate_consolidated_bill_pdf, open_pdf
+
+
+def _amount_in_words(amount: float) -> str:
+    """Convert a numeric amount to words (e.g. 1250 → One Thousand Two Hundred Fifty Rupees Only)."""
+    if amount == 0:
+        return "Zero Rupees Only"
+    units = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"]
+    teens = ["Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen",
+             "Sixteen", "Seventeen", "Eighteen", "Nineteen"]
+    tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"]
+
+    def _under_1000(n):
+        res = ""
+        if n >= 100:
+            res += units[n // 100] + " Hundred "
+            n %= 100
+        if 10 < n < 20:
+            res += teens[n - 10] + " "
+        else:
+            if n >= 20:
+                res += tens[n // 10] + " "
+                n %= 10
+            if n > 0:
+                res += units[n] + " "
+        return res.strip()
+
+    amt = int(round(amount))
+    words = ""
+    if amt >= 100000:
+        words += _under_1000(amt // 100000) + " Lakh "
+        amt %= 100000
+    if amt >= 1000:
+        words += _under_1000(amt // 1000) + " Thousand "
+        amt %= 1000
+    if amt > 0:
+        words += _under_1000(amt)
+    return words.strip() + " Rupees Only"
 
 
 class BillingWindow(QWidget):
@@ -286,41 +323,7 @@ class BillingWindow(QWidget):
         self.amount_label.setText(f" {amount:,.2f}")
 
     def _amount_in_words(self, amount: float) -> str:
-        if amount == 0:
-            return "Zero Rupees Only"
-        units = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"]
-        teens = ["Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen",
-                 "Sixteen", "Seventeen", "Eighteen", "Nineteen"]
-        tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"]
-
-        def _under_1000(n):
-            res = ""
-            if n >= 100:
-                res += units[n // 100] + " Hundred "
-                n %= 100
-            if 10 < n < 20:
-                res += teens[n - 10] + " "
-            else:
-                if n >= 20:
-                    res += tens[n // 10] + " "
-                    n %= 10
-                if n > 0:
-                    res += units[n] + " "
-            return res.strip()
-
-        amt = int(round(amount))
-        words = ""
-        if amt >= 100000:
-            lakhs = amt // 100000
-            words += _under_1000(lakhs) + " Lakh "
-            amt %= 100000
-        if amt >= 1000:
-            thousands = amt // 1000
-            words += _under_1000(thousands) + " Thousand "
-            amt %= 1000
-        if amt > 0:
-            words += _under_1000(amt)
-        return words.strip() + " Rupees Only"
+        return _amount_in_words(amount)
 
     def _save_bill(self):
         idx = self.cust_combo.currentIndex()
@@ -467,7 +470,7 @@ class BillingWindow(QWidget):
         header.resizeSection(3, 105)
         header.resizeSection(4, 80)
         header.resizeSection(5, 60)
-        header.resizeSection(6, 195)
+        header.resizeSection(6, 230)
         layout.addWidget(self.list_table)
 
         page_layout = QHBoxLayout()
@@ -569,20 +572,26 @@ class BillingWindow(QWidget):
 
             bill_id = bill["id"]
             view_btn = QPushButton("View")
-            view_btn.setFixedSize(50, 26)
+            view_btn.setFixedSize(45, 26)
             view_btn.setStyleSheet("background: #3f51b5; color: white; border: none; border-radius: 3px;")
             view_btn.clicked.connect(lambda checked, bid=bill_id: self._view_bill(bid))
             al.addWidget(view_btn)
 
+            edit_btn = QPushButton("Edit")
+            edit_btn.setFixedSize(40, 26)
+            edit_btn.setStyleSheet("background: #2196f3; color: white; border: none; border-radius: 3px;")
+            edit_btn.clicked.connect(lambda checked, bid=bill_id: self._edit_bill(bid))
+            al.addWidget(edit_btn)
+
             if bill["status"] == "active":
                 cancel_btn = QPushButton("Cancel")
-                cancel_btn.setFixedSize(55, 26)
+                cancel_btn.setFixedSize(50, 26)
                 cancel_btn.setStyleSheet("background: #f44336; color: white; border: none; border-radius: 3px;")
                 cancel_btn.clicked.connect(lambda checked, bid=bill_id: self._cancel_bill(bid))
                 al.addWidget(cancel_btn)
 
             del_btn = QPushButton("Del")
-            del_btn.setFixedSize(40, 26)
+            del_btn.setFixedSize(36, 26)
             del_btn.setStyleSheet("background: #d32f2f; color: white; border: none; border-radius: 3px;")
             del_btn.clicked.connect(lambda checked, bid=bill_id: self._delete_bill(bid))
             al.addWidget(del_btn)
@@ -595,6 +604,16 @@ class BillingWindow(QWidget):
             open_pdf(path)
         except Exception as e:
             QMessageBox.critical(self, "Error", str(e))
+
+    def _edit_bill(self, bill_id: int):
+        bill = get_sale_bill(bill_id)
+        if not bill:
+            QMessageBox.warning(self, "Error", "Bill not found.")
+            return
+        dialog = BillEditDialog(bill, self)
+        if dialog.exec() == QDialog.Accepted:
+            self._current_page = 1
+            self._search_bills()
 
     def _cancel_bill(self, bill_id: int):
         ok = QMessageBox.question(
@@ -630,3 +649,186 @@ class BillingWindow(QWidget):
         self._current_page = 1
         self._load_invoice_customers()
         self._search_bills()
+
+
+class BillEditDialog(QDialog):
+    """Dialog for editing an existing sale bill."""
+
+    def __init__(self, bill: dict, parent=None):
+        super().__init__(parent)
+        self.bill_id = bill["id"]
+        self.setWindowTitle(f"Edit Bill — {bill['bill_no']}")
+        self.setMinimumWidth(500)
+        self.setModal(True)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(12)
+
+        header = QLabel(f"Editing: {bill['bill_no']}")
+        header.setFont(QFont("Segoe UI", 14, QFont.Bold))
+        header.setStyleSheet("color: #1a237e;")
+        layout.addWidget(header)
+
+        form = QFormLayout()
+        form.setSpacing(10)
+
+        # --- Date ---
+        self.date_edit = QDateEdit()
+        self.date_edit.setCalendarPopup(True)
+        self.date_edit.setDate(
+            date.fromisoformat(bill["bill_date"]) if bill.get("bill_date") else date.today()
+        )
+        self.date_edit.setStyleSheet("padding: 4px 8px;")
+        form.addRow("Date:", self.date_edit)
+
+        # --- Customer ---
+        from customer import get_all_customers
+        self.cust_combo = QComboBox()
+        self.cust_combo.setMinimumWidth(280)
+        self.cust_combo.setStyleSheet("padding: 4px 8px;")
+        customers = get_all_customers()
+        selected_idx = 0
+        for i, c in enumerate(customers):
+            label = f"{c['name']}  |  {c.get('mobile', '')}"
+            self.cust_combo.addItem(label, c["id"])
+            if c["id"] == bill["customer_id"]:
+                selected_idx = i
+        self.cust_combo.setCurrentIndex(selected_idx)
+        self._selected_customer_id = bill["customer_id"]
+        self.cust_combo.currentIndexChanged.connect(self._on_cust_changed)
+        form.addRow("Company:", self.cust_combo)
+
+        # --- Vehicle No ---
+        self.vehicle_no = QLineEdit()
+        self.vehicle_no.setText(bill.get("vehicle_no", ""))
+        self.vehicle_no.setStyleSheet("padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px;")
+        form.addRow("Vehicle No:", self.vehicle_no)
+
+        # --- Weights ---
+        weight_row = QHBoxLayout()
+        self.gross_weight = QDoubleSpinBox()
+        self.gross_weight.setRange(0, 999999)
+        self.gross_weight.setDecimals(2)
+        self.gross_weight.setValue(bill.get("gross_weight", 0))
+        self.gross_weight.setStyleSheet("padding: 4px 8px;")
+        self.gross_weight.valueChanged.connect(self._recalc)
+        weight_row.addWidget(QLabel("Gross:"))
+        weight_row.addWidget(self.gross_weight)
+        weight_row.addSpacing(10)
+
+        self.tare_weight = QDoubleSpinBox()
+        self.tare_weight.setRange(0, 999999)
+        self.tare_weight.setDecimals(2)
+        self.tare_weight.setValue(bill.get("tare_weight", 0))
+        self.tare_weight.setStyleSheet("padding: 4px 8px;")
+        self.tare_weight.valueChanged.connect(self._recalc)
+        weight_row.addWidget(QLabel("Tare:"))
+        weight_row.addWidget(self.tare_weight)
+        weight_row.addSpacing(10)
+
+        self.net_label = QLabel(f"{bill.get('net_weight', 0):.2f}")
+        self.net_label.setFont(QFont("Segoe UI", 12, QFont.Bold))
+        self.net_label.setStyleSheet("color: #1a237e;")
+        weight_row.addWidget(QLabel("Net:"))
+        weight_row.addWidget(self.net_label)
+        form.addRow("Weights (Kg):", weight_row)
+
+        # --- Rate ---
+        self.rate_spin = QDoubleSpinBox()
+        self.rate_spin.setRange(0, 999999)
+        self.rate_spin.setDecimals(2)
+        self.rate_spin.setValue(bill.get("rate", 0))
+        self.rate_spin.setStyleSheet("padding: 4px 8px;")
+        self.rate_spin.valueChanged.connect(self._recalc)
+        form.addRow("Rate per Kg:", self.rate_spin)
+
+        # --- Amount (read-only display) ---
+        self.amount_label = QLabel(f"  {bill.get('amount', 0):,.2f}")
+        self.amount_label.setFont(QFont("Segoe UI", 14, QFont.Bold))
+        self.amount_label.setStyleSheet("color: #1a237e;")
+        form.addRow("Total Amount:", self.amount_label)
+
+        layout.addLayout(form)
+        layout.addSpacing(12)
+
+        # --- Buttons ---
+        btn_layout = QHBoxLayout()
+        save_btn = QPushButton("  Save Changes")
+        save_btn.setFixedHeight(38)
+        save_btn.setStyleSheet("""
+            QPushButton { background: #3f51b5; color: white; padding: 8px 24px;
+                          border: none; border-radius: 4px; font-size: 13px; font-weight: bold; }
+            QPushButton:hover { background: #303f9f; }
+        """)
+        save_btn.clicked.connect(self._save)
+        btn_layout.addWidget(save_btn)
+
+        cancel_btn = QPushButton("Cancel")
+        cancel_btn.setFixedHeight(38)
+        cancel_btn.setStyleSheet("""
+            QPushButton { background: #f5f5f5; padding: 8px 20px;
+                          border: 1px solid #ccc; border-radius: 4px; }
+            QPushButton:hover { background: #e0e0e0; }
+        """)
+        cancel_btn.clicked.connect(self.reject)
+        btn_layout.addWidget(cancel_btn)
+
+        btn_layout.addStretch()
+        layout.addLayout(btn_layout)
+
+    def _on_cust_changed(self):
+        idx = self.cust_combo.currentIndex()
+        if idx >= 0:
+            self._selected_customer_id = self.cust_combo.itemData(idx)
+
+    def _recalc(self):
+        gross = self.gross_weight.value()
+        tare = self.tare_weight.value()
+        net = max(0, gross - tare)
+        self.net_label.setText(f"{net:.2f}")
+        rate = self.rate_spin.value()
+        amount = net * rate
+        self.amount_label.setText(f"  {amount:,.2f}")
+
+    def _save(self):
+        idx = self.cust_combo.currentIndex()
+        if idx < 0:
+            QMessageBox.warning(self, "Error", "Please select a company.")
+            return
+
+        cid = self.cust_combo.itemData(idx)
+        from customer import get_customer
+        c = get_customer(cid) if cid else None
+        if not c:
+            QMessageBox.warning(self, "Error", "Invalid company.")
+            return
+
+        gross = self.gross_weight.value()
+        if gross <= 0:
+            QMessageBox.warning(self, "Error", "Gross weight must be greater than zero.")
+            return
+
+        tare = self.tare_weight.value()
+        net = max(0, gross - tare)
+        rate = self.rate_spin.value()
+        amount = net * rate
+
+        update_sale_bill(
+            bill_id=self.bill_id,
+            customer_id=c["id"],
+            customer_name=c["name"],
+            customer_mobile=c.get("mobile", ""),
+            vehicle_no=self.vehicle_no.text().strip(),
+            gross_weight=gross,
+            tare_weight=tare,
+            net_weight=net,
+            weight_unit="Kg",
+            rate=rate,
+            amount=amount,
+            bill_date=self.date_edit.date().toString("yyyy-MM-dd"),
+            amount_in_words=_amount_in_words(amount),
+        )
+
+        QMessageBox.information(self, "Saved", "Bill updated successfully.")
+        self.accept()

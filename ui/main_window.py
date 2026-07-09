@@ -120,10 +120,11 @@ class MainWindow(QMainWindow):
             ("  &Dashboard        Alt+D", 0),
             ("  &Companies        Alt+C", 1),
             ("  &New Bill         Alt+N", 2),
-            ("  &Reports          Alt+R", 3),
-            ("  Receip&ts         Alt+T", 4),
-            ("  &Blank Invoice    Alt+B", 5),
-            ("  &Settings         Alt+S", 6),
+            ("  &Bills List       Alt+L", 3),
+            ("  &Reports          Alt+R", 4),
+            ("  Receip&ts         Alt+T", 5),
+            ("  &Blank Invoice    Alt+B", 6),
+            ("  &Settings         Alt+S", 7),
         ]
         for text, idx in nav_items:
             btn = SidebarButton(text, idx)
@@ -168,6 +169,9 @@ class MainWindow(QMainWindow):
         self.billing_window = BillingWindow()
         self.stack.addWidget(self.billing_window)
 
+        self.bills_list_window = BillingWindow(list_mode=True)
+        self.stack.addWidget(self.bills_list_window)
+
         self.reports_window = ReportsWindow()
         self.stack.addWidget(self.reports_window)
 
@@ -199,12 +203,14 @@ class MainWindow(QMainWindow):
         elif btn.page_index == 2:
             self.billing_window.refresh_for_new()
         elif btn.page_index == 3:
-            self.reports_window.refresh()
+            self.bills_list_window.refresh_list()
         elif btn.page_index == 4:
-            self.receipt_window.refresh_list()
+            self.reports_window.refresh()
         elif btn.page_index == 5:
-            self.blank_invoice_window.refresh_for_new()
+            self.receipt_window.refresh_list()
         elif btn.page_index == 6:
+            self.blank_invoice_window.refresh_for_new()
+        elif btn.page_index == 7:
             self._refresh_settings()
 
     def _build_dashboard(self):
