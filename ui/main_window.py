@@ -2,7 +2,7 @@ from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
     QStackedWidget, QLabel, QFrame, QSizePolicy, QMessageBox,
     QTableWidget, QTableWidgetItem, QHeaderView, QLineEdit,
-    QGridLayout, QScrollArea,
+    QGridLayout, QScrollArea, QTextEdit,
 )
 from PySide6.QtCore import Qt, Signal, Slot, QSize
 from PySide6.QtGui import QFont, QIcon, QColor, QPalette, QAction, QShortcut, QKeySequence
