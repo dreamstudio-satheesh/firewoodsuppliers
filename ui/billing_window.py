@@ -19,6 +19,18 @@ from billing import (
 from printer import generate_bill_pdf, generate_consolidated_bill_pdf, open_pdf
 
 
+class NumericTableItem(QTableWidgetItem):
+    """QTableWidgetItem that sorts by a stored numeric value rather than display text."""
+    def __init__(self, display_text: str, sort_value: float):
+        super().__init__(display_text)
+        self._sort_value = sort_value
+
+    def __lt__(self, other):
+        if isinstance(other, NumericTableItem):
+            return self._sort_value < other._sort_value
+        return super().__lt__(other)
+
+
 def _amount_in_words(amount: float) -> str:
     """Convert a numeric amount to words (e.g. 1250 → One Thousand Two Hundred Fifty Rupees Only)."""
     if amount == 0:
@@ -475,6 +487,7 @@ class BillingWindow(QWidget):
         header.resizeSection(4, 80)
         header.resizeSection(5, 60)
         header.resizeSection(6, 230)
+        self.list_table.setSortingEnabled(True)
         layout.addWidget(self.list_table)
 
         page_layout = QHBoxLayout()
@@ -560,6 +573,7 @@ class BillingWindow(QWidget):
         self.prev_btn.setEnabled(self._current_page > 1)
         self.next_btn.setEnabled(self._current_page < self._total_pages)
 
+        self.list_table.setSortingEnabled(False)
         self.list_table.setRowCount(0)
         for bill in bills:
             row = self.list_table.rowCount()
@@ -567,8 +581,8 @@ class BillingWindow(QWidget):
             self.list_table.setItem(row, 0, QTableWidgetItem(bill["bill_no"]))
             self.list_table.setItem(row, 1, QTableWidgetItem(bill["customer_name"]))
             self.list_table.setItem(row, 2, QTableWidgetItem(bill["bill_date"]))
-            self.list_table.setItem(row, 3, QTableWidgetItem(f"  {bill['amount']:,.2f}"))
-            self.list_table.setItem(row, 4, QTableWidgetItem(f"{bill['net_weight']:.1f} Kg"))
+            self.list_table.setItem(row, 3, NumericTableItem(f"  {bill['amount']:,.2f}", bill['amount']))
+            self.list_table.setItem(row, 4, NumericTableItem(f"{bill['net_weight']:.1f} Kg", bill['net_weight']))
             self.list_table.setItem(row, 5, QTableWidgetItem(bill["status"].title()))
 
             action_w = QWidget()
@@ -603,6 +617,8 @@ class BillingWindow(QWidget):
             al.addWidget(del_btn)
 
             self.list_table.setCellWidget(row, 6, action_w)
+
+        self.list_table.setSortingEnabled(True)
 
     def _view_bill(self, bill_id: int):
         try:
