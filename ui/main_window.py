@@ -117,14 +117,14 @@ class MainWindow(QMainWindow):
 
         self.nav_buttons = []
         nav_items = [
-            ("  &Dashboard        Alt+D", 0),
-            ("  &Companies        Alt+C", 1),
-            ("  &New Bill         Alt+N", 2),
-            ("  &Bills List       Alt+L", 3),
-            ("  &Reports          Alt+R", 4),
-            ("  Receip&ts         Alt+T", 5),
-            ("  &Blank Invoice    Alt+B", 6),
-            ("  &Settings         Alt+S", 7),
+            ("  Dashboard        Alt+D", 0),
+            ("  Companies        Alt+C", 1),
+            ("  New Bill         Alt+N", 2),
+            ("  Bills List       Alt+L", 3),
+            ("  Reports          Alt+R", 4),
+            ("  Receipts         Alt+T", 5),
+            ("  Blank Invoice    Alt+B", 6),
+            ("  Settings         Alt+S", 7),
         ]
         for text, idx in nav_items:
             btn = SidebarButton(text, idx)
