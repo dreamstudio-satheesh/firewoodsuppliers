@@ -45,7 +45,7 @@ def _amount_in_words(amount: float) -> str:
         if n >= 100:
             res += units[n // 100] + " Hundred "
             n %= 100
-        if 10 < n < 20:
+        if 10 <= n < 20:
             res += teens[n - 10] + " "
         else:
             if n >= 20:
