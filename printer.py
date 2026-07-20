@@ -761,13 +761,14 @@ def generate_statement_pdf(
         return parts[-1] if len(parts) > 1 else ref
 
     # Transaction table — balanced column widths summing to 186mm
-    hdr = ["Date", "Description", "Vehicle", "Gross", "Tare", "Net Wt", "Amount", "Received", "Balance"]
-    cw = [22*mm, 38*mm, 22*mm, 16*mm, 16*mm, 18*mm, 20*mm, 18*mm, 16*mm]
+    hdr = ["#", "Date", "Description", "Vehicle", "Gross", "Tare", "Net Wt", "Amount", "Received", "Balance"]
+    cw = [8*mm, 20*mm, 36*mm, 20*mm, 15*mm, 15*mm, 16*mm, 18*mm, 18*mm, 20*mm]
 
     data = [hdr]
 
     # Opening balance row
     data.append([
+        "",
         "",
         Paragraph("<b>Opening Balance</b>",
                    ParagraphStyle("OB", fontName=FONT_NAME, fontSize=10)),
@@ -777,10 +778,11 @@ def generate_statement_pdf(
 
     total_sale = 0
     total_recv = 0
-    for t in stmt["transactions"]:
+    for i, t in enumerate(stmt["transactions"], 1):
         if t["type"] == "Bill":
             desc = f"Sale - {_short_ref(t['ref_no'])}"
             data.append([
+                str(i),
                 t["tx_date"], desc,
                 t.get("vehicle_no", ""),
                 f"{t.get('gross_weight', 0):,.2f}",
@@ -794,6 +796,7 @@ def generate_statement_pdf(
         else:
             desc = f"Payment - {_short_ref(t['ref_no'])}"
             data.append([
+                str(i),
                 t["tx_date"], desc,
                 "", "", "", "", "",
                 f"{t['credit']:,.2f}",
@@ -802,8 +805,9 @@ def generate_statement_pdf(
             total_recv += t["credit"]
 
     # Totals row
-    data.append(["", "", "", "", "", "", "", "", ""])
+    data.append(["", "", "", "", "", "", "", "", "", ""])
     data.append([
+        "",
         "",
         Paragraph("<b>Total</b>",
                    ParagraphStyle("TTL", fontName=FONT_NAME, fontSize=10)),
@@ -822,7 +826,7 @@ def generate_statement_pdf(
         ("FONTSIZE", (0, 1), (-1, -1), 9),
         ("FONTSIZE", (0, -1), (-1, -1), 11),
         ("ALIGN", (0, 0), (-1, 0), "CENTER"),
-        ("ALIGN", (0, 1), (0, -1), "LEFT"),
+        ("ALIGN", (0, 1), (0, -1), "CENTER"),
         ("ALIGN", (1, 1), (1, -1), "LEFT"),
         ("ALIGN", (2, 1), (2, -1), "LEFT"),
         ("ALIGN", (3, 1), (-1, -1), "RIGHT"),
