@@ -27,6 +27,16 @@ BORDER = colors.HexColor("#cccccc")
 WHITE = colors.white
 BLACK = colors.black
 
+
+def _fmt_date(iso_date: str) -> str:
+    """Convert yyyy-MM-dd to dd-mm-yy."""
+    if not iso_date or "-" not in iso_date:
+        return iso_date or ""
+    parts = iso_date.split("-")
+    if len(parts) == 3:
+        return f"{parts[2]}-{parts[1]}-{parts[0][2:]}"
+    return iso_date
+
 MARGIN_LR = 12*mm
 MARGIN_TOP = 8*mm
 MARGIN_BOTTOM = 10*mm
@@ -235,7 +245,7 @@ def generate_bill_pdf(bill_id: int, output_path: str | None = None) -> str:
 
     left_rows = [
         _info_pair("Bill No", f"<b>{bill['bill_no']}</b>"),
-        _info_pair("Date", f"<b>{bill['bill_date']}</b>"),
+        _info_pair("Date", f"<b>{_fmt_date(bill['bill_date'])}</b>"),
     ]
     if bill.get("vehicle_no"):
         left_rows.append(_info_pair("Vehicle No", f"<b>{bill['vehicle_no']}</b>"))
@@ -469,7 +479,7 @@ def generate_consolidated_bill_pdf(
 
     left_rows = [
         _info_pair("Customer", f"<b>{customer_name}</b>"),
-        _info_pair("Period", f"<b>{date_from}</b> to <b>{date_to}</b>"),
+        _info_pair("Period", f"<b>{_fmt_date(date_from)}</b> to <b>{_fmt_date(date_to)}</b>"),
     ]
     left_tbl = Table(left_rows, colWidths=[28*mm, 60*mm])
     left_tbl.setStyle(TableStyle([
@@ -522,7 +532,7 @@ def generate_consolidated_bill_pdf(
     for i, e in enumerate(entries, 1):
         data.append([
             str(i),
-            e["bill_date"],
+            _fmt_date(e["bill_date"]),
             e.get("vehicle_no", ""),
             f"{e['gross_weight']:.2f}",
             f"{e['tare_weight']:.2f}",
@@ -704,7 +714,7 @@ def generate_statement_pdf(
 
     left_rows = [
         _info_pair("Customer", f"<b>{customer_name}</b>"),
-        _info_pair("Period", f"<b>{date_from}</b> to <b>{date_to}</b>"),
+        _info_pair("Period", f"<b>{_fmt_date(date_from)}</b> to <b>{_fmt_date(date_to)}</b>"),
         _info_pair("Opening Balance", f"<b>{stmt['opening_balance']:,.2f}</b>"),
     ]
     left_tbl = Table(left_rows, colWidths=[36*mm, 62*mm])
@@ -783,7 +793,7 @@ def generate_statement_pdf(
             desc = f"Sale - {_short_ref(t['ref_no'])}"
             data.append([
                 str(i),
-                t["tx_date"], desc,
+                _fmt_date(t["tx_date"]), desc,
                 t.get("vehicle_no", ""),
                 f"{t.get('gross_weight', 0):,.2f}",
                 f"{t.get('tare_weight', 0):,.2f}",
@@ -797,7 +807,7 @@ def generate_statement_pdf(
             desc = f"Payment - {_short_ref(t['ref_no'])}"
             data.append([
                 str(i),
-                t["tx_date"], desc,
+                _fmt_date(t["tx_date"]), desc,
                 "", "", "", "", "",
                 f"{t['credit']:,.2f}",
                 f"{t['balance']:,.2f}",
@@ -895,7 +905,7 @@ def generate_receipt_pdf(receipt_id: int, output_path: str | None = None) -> str
 
     left_rows = [
         _info_pair("Receipt No", f"<b>{rec['receipt_no']}</b>"),
-        _info_pair("Date", f"<b>{rec['receipt_date']}</b>"),
+        _info_pair("Date", f"<b>{_fmt_date(rec['receipt_date'])}</b>"),
         _info_pair("Against Bill", f"<b>{rec.get('bill_no') or 'N/A'}</b>"),
         _info_pair("Payment Mode", f"<b>{rec.get('mode', 'Cash')}</b>"),
     ]
@@ -1066,7 +1076,7 @@ def generate_blank_invoice_pdf(
                    f"<b>{bill_no}</b>  ____________________" if bill_no
                    else "____________________"),
         _info_pair("Date",
-                   f"<b>{bill_date}</b>  ____________________" if bill_date
+                   f"<b>{_fmt_date(bill_date)}</b>  ____________________" if bill_date
                    else "____________________"),
         _info_pair("Vehicle No", "____________________"),
     ]
