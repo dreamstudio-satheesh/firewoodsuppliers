@@ -16,6 +16,16 @@ from exporter import export_csv, export_xlsx, export_pdf_table
 from printer import open_pdf, generate_statement_pdf
 
 
+def _fmt_date(iso_date: str) -> str:
+    """Convert yyyy-MM-dd to dd-mm-yy."""
+    if not iso_date or "-" not in iso_date:
+        return iso_date or ""
+    parts = iso_date.split("-")
+    if len(parts) == 3:
+        return f"{parts[2]}-{parts[1]}-{parts[0][2:]}"
+    return iso_date
+
+
 class ReportTab(QWidget):
     def __init__(self, column_headers: list[str], column_keys: list[str],
                  fetch_fn, title: str, parent=None):
@@ -157,10 +167,83 @@ class ReportTab(QWidget):
 
 class SalesRegisterTab(ReportTab):
     def __init__(self, parent=None):
-        cols = ["Date", "Bill No", "Customer", "Vehicle", "Gross", "Tare", "Net Wt", "Amount"]
-        keys = ["bill_date", "bill_no", "customer_name", "vehicle_no",
+        cols = ["#", "Date", "Bill No", "Customer", "Vehicle", "Gross", "Tare", "Net Wt", "Amount"]
+        keys = ["_row_num", "bill_date", "bill_no", "customer_name", "vehicle_no",
                 "gross_weight", "tare_weight", "net_weight", "amount"]
         super().__init__(cols, keys, sales_detail, "Sales Register", parent)
+
+    def _refresh(self):
+        from_date = self.date_from.date().toString("yyyy-MM-dd")
+        to_date = self.date_to.date().toString("yyyy-MM-dd")
+
+        try:
+            raw = self._fetch_fn(from_date, to_date)
+        except Exception as e:
+            QMessageBox.warning(self, "Error", str(e))
+            raw = []
+
+        # Enrich with row number + format date
+        self._data = []
+        for i, row in enumerate(raw, 1):
+            r = dict(row)
+            r["_row_num"] = i
+            r["bill_date"] = _fmt_date(r.get("bill_date", ""))
+            self._data.append(r)
+
+        self.table.setRowCount(0)
+        for row_data in self._data:
+            row = self.table.rowCount()
+            self.table.insertRow(row)
+            for col_idx, key in enumerate(self._column_keys):
+                val = row_data.get(key, "")
+                text = str(val) if not isinstance(val, float) else f"{val:,.2f}"
+                item = QTableWidgetItem(text)
+                if isinstance(val, float):
+                    item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                self.table.setItem(row, col_idx, item)
+
+    def _export(self, fmt: str):
+        from_date = self.date_from.date().toString("yyyy-MM-dd")
+        to_date = self.date_to.date().toString("yyyy-MM-dd")
+
+        try:
+            raw = self._fetch_fn(from_date, to_date)
+        except Exception as e:
+            QMessageBox.warning(self, "Error", str(e))
+            return
+
+        data = []
+        for i, row in enumerate(raw, 1):
+            r = dict(row)
+            r["_row_num"] = i
+            r["bill_date"] = _fmt_date(r.get("bill_date", ""))
+            data.append(r)
+
+        if not data:
+            QMessageBox.information(self, "Export", "No data to export.")
+            return
+
+        safe_title = self._title.replace(" ", "_")
+        base = os.path.join(tempfile.gettempdir(), safe_title)
+        path = f"{base}.{fmt}"
+
+        try:
+            if fmt == "csv":
+                path = export_csv(data, self._column_headers, self._column_keys, path)
+            elif fmt == "xlsx":
+                path = export_xlsx(data, self._column_headers, self._column_keys,
+                                   self._title[:31], path)
+            elif fmt == "pdf":
+                path = export_pdf_table(data, self._column_headers, self._column_keys,
+                                        self._title, path)
+            QMessageBox.information(
+                self, "Exported",
+                f"{fmt.upper()} saved to:\n{path}"
+            )
+            if fmt == "pdf":
+                open_pdf(path)
+        except Exception as e:
+            QMessageBox.critical(self, "Export Error", str(e))
 
 
 class CustomerStatementTab(QWidget):
@@ -223,9 +306,9 @@ class CustomerStatementTab(QWidget):
         layout.addSpacing(8)
 
         self.table = QTableWidget()
-        self.table.setColumnCount(9)
+        self.table.setColumnCount(10)
         self.table.setHorizontalHeaderLabels(
-            ["Date", "Description", "Vehicle", "Gross Wt", "Tare Wt", "Net Wt", "Amount", "Received", "Balance"]
+            ["#", "Date", "Description", "Vehicle", "Gross Wt", "Tare Wt", "Net Wt", "Amount", "Received", "Balance"]
         )
         self.table.setAlternatingRowColors(True)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
@@ -238,23 +321,25 @@ class CustomerStatementTab(QWidget):
             QTableWidget::item { padding: 4px; }
         """)
         h = self.table.horizontalHeader()
-        h.setSectionResizeMode(1, QHeaderView.Stretch)
+        h.setSectionResizeMode(2, QHeaderView.Stretch)
         h.setSectionResizeMode(0, QHeaderView.Interactive)
-        h.setSectionResizeMode(2, QHeaderView.Interactive)
+        h.setSectionResizeMode(1, QHeaderView.Interactive)
         h.setSectionResizeMode(3, QHeaderView.Interactive)
         h.setSectionResizeMode(4, QHeaderView.Interactive)
         h.setSectionResizeMode(5, QHeaderView.Interactive)
         h.setSectionResizeMode(6, QHeaderView.Interactive)
         h.setSectionResizeMode(7, QHeaderView.Interactive)
         h.setSectionResizeMode(8, QHeaderView.Interactive)
-        h.resizeSection(0, 100)
-        h.resizeSection(2, 90)
-        h.resizeSection(3, 80)
+        h.setSectionResizeMode(9, QHeaderView.Interactive)
+        h.resizeSection(0, 35)
+        h.resizeSection(1, 100)
+        h.resizeSection(3, 90)
         h.resizeSection(4, 80)
         h.resizeSection(5, 80)
-        h.resizeSection(6, 100)
+        h.resizeSection(6, 80)
         h.resizeSection(7, 100)
         h.resizeSection(8, 100)
+        h.resizeSection(9, 100)
         layout.addWidget(self.table)
 
         self._stmt_data = None
@@ -300,42 +385,46 @@ class CustomerStatementTab(QWidget):
         row = self.table.rowCount()
         self.table.insertRow(row)
         self.table.setItem(row, 0, _empty())
-        self.table.setItem(row, 1, _bold("Opening Balance"))
-        for col in range(2, 8):
+        self.table.setItem(row, 1, _empty())
+        self.table.setItem(row, 2, _bold("Opening Balance"))
+        for col in range(3, 9):
             self.table.setItem(row, col, _empty())
-        self.table.setItem(row, 8, _right(f"{self._stmt_data['opening_balance']:,.2f}"))
+        self.table.setItem(row, 9, _right(f"{self._stmt_data['opening_balance']:,.2f}"))
 
-        for t in self._stmt_data["transactions"]:
+        for i, t in enumerate(self._stmt_data["transactions"], 1):
             row = self.table.rowCount()
             self.table.insertRow(row)
-            self.table.setItem(row, 0, QTableWidgetItem(t["tx_date"]))
+            self.table.setItem(row, 0, QTableWidgetItem(str(i)))
+            self.table.setItem(row, 1, QTableWidgetItem(_fmt_date(t["tx_date"])))
             if t["type"] == "Bill":
-                self.table.setItem(row, 1, QTableWidgetItem(f"Sale - {t['ref_no']}"))
-                self.table.setItem(row, 2, QTableWidgetItem(t.get("vehicle_no", "")))
-                self.table.setItem(row, 3, _right(f"{t.get('gross_weight', 0):,.2f}"))
-                self.table.setItem(row, 4, _right(f"{t.get('tare_weight', 0):,.2f}"))
-                self.table.setItem(row, 5, _right(f"{t.get('net_weight', 0):,.2f}"))
-                self.table.setItem(row, 6, _right(f"{t['debit']:,.2f}"))
-                self.table.setItem(row, 7, _empty())
+                self.table.setItem(row, 2, QTableWidgetItem(f"Sale - {t['ref_no']}"))
+                self.table.setItem(row, 3, QTableWidgetItem(t.get("vehicle_no", "")))
+                self.table.setItem(row, 4, _right(f"{t.get('gross_weight', 0):,.2f}"))
+                self.table.setItem(row, 5, _right(f"{t.get('tare_weight', 0):,.2f}"))
+                self.table.setItem(row, 6, _right(f"{t.get('net_weight', 0):,.2f}"))
+                self.table.setItem(row, 7, _right(f"{t['debit']:,.2f}"))
+                self.table.setItem(row, 8, _empty())
             else:
-                self.table.setItem(row, 1, QTableWidgetItem(f"Payment - {t['ref_no']}"))
-                for col in range(2, 7):
+                self.table.setItem(row, 2, QTableWidgetItem(f"Payment - {t['ref_no']}"))
+                for col in range(3, 8):
                     self.table.setItem(row, col, _empty())
-                self.table.setItem(row, 7, _right(f"{t['credit']:,.2f}"))
-            self.table.setItem(row, 8, _right(f"{t['balance']:,.2f}"))
+                self.table.setItem(row, 8, _right(f"{t['credit']:,.2f}"))
+            self.table.setItem(row, 9, _right(f"{t['balance']:,.2f}"))
 
         # Closing balance
         row = self.table.rowCount()
         self.table.insertRow(row)
-        for col in range(9):
+        for col in range(10):
             self.table.setItem(row, col, _empty())
 
         row = self.table.rowCount()
         self.table.insertRow(row)
-        self.table.setItem(row, 1, _bold("Closing Balance"))
-        for col in range(2, 8):
+        self.table.setItem(row, 0, _empty())
+        self.table.setItem(row, 1, _empty())
+        self.table.setItem(row, 2, _bold("Closing Balance"))
+        for col in range(3, 9):
             self.table.setItem(row, col, _empty())
-        self.table.setItem(row, 8, _right(f"{self._stmt_data['closing_balance']:,.2f}"))
+        self.table.setItem(row, 9, _right(f"{self._stmt_data['closing_balance']:,.2f}"))
 
     def _print_pdf(self):
         if not self._stmt_data:
