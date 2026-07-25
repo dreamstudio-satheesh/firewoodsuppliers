@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QPushButton, QTableWidget, QTableWidgetItem, QHeaderView,
     QMessageBox, QComboBox, QDoubleSpinBox, QDateEdit,
-    QFormLayout, QGroupBox, QGridLayout, QDialog,
+    QFormLayout, QGroupBox, QGridLayout, QDialog, QFrame,
 )
 from PySide6.QtCore import Qt, QEvent
 from PySide6.QtGui import QFont
