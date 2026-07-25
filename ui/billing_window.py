@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
@@ -414,7 +414,7 @@ class BillingWindow(QWidget):
 
         self.list_date_from = QDateEdit()
         self.list_date_from.setCalendarPopup(True)
-        self.list_date_from.setDate(date(2000, 1, 1))
+        self.list_date_from.setDate(date.today() - timedelta(days=30))
         self.list_date_from.setStyleSheet("padding: 4px 8px;")
         search_layout.addWidget(QLabel("From:"))
         search_layout.addWidget(self.list_date_from)
