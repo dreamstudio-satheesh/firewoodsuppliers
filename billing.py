@@ -145,6 +145,34 @@ def get_entries_for_consolidated_bill(
     return [dict(r) for r in rows]
 
 
+def get_opening_balance(before_date: str) -> float:
+    """Net outstanding balance before a given date (active bills - active receipts)."""
+    conn = get_connection()
+    bills_total = conn.execute(
+        "SELECT COALESCE(SUM(amount), 0) FROM sale_bill WHERE status='active' AND bill_date < ?",
+        (before_date,),
+    ).fetchone()[0]
+    receipts_total = conn.execute(
+        "SELECT COALESCE(SUM(amount), 0) FROM receipt WHERE status='active' AND receipt_date < ?",
+        (before_date,),
+    ).fetchone()[0]
+    return bills_total - receipts_total
+
+
+def get_period_totals(date_from: str, date_to: str) -> tuple[float, float]:
+    """Return (total_bills, total_receipts) for active entries within a date range."""
+    conn = get_connection()
+    bills = conn.execute(
+        "SELECT COALESCE(SUM(amount), 0) FROM sale_bill WHERE status='active' AND bill_date BETWEEN ? AND ?",
+        (date_from, date_to),
+    ).fetchone()[0]
+    receipts = conn.execute(
+        "SELECT COALESCE(SUM(amount), 0) FROM receipt WHERE status='active' AND receipt_date BETWEEN ? AND ?",
+        (date_from, date_to),
+    ).fetchone()[0]
+    return bills, receipts
+
+
 def get_dashboard_data() -> dict:
     conn = get_connection()
     today_sales = conn.execute(

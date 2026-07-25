@@ -15,6 +15,7 @@ from ui.customer_window import CustomerDialog
 from billing import (
     create_sale_bill, search_sale_bills, get_sale_bill,
     update_sale_bill, cancel_sale_bill, delete_sale_bill,
+    get_opening_balance, get_period_totals,
 )
 from printer import generate_bill_pdf, generate_consolidated_bill_pdf, open_pdf
 
@@ -458,6 +459,32 @@ class BillingWindow(QWidget):
         layout.addLayout(invoice_layout)
         layout.addSpacing(12)
 
+        # --- Summary bar (opening balance / period totals / closing balance) ---
+        summary_frame = QFrame()
+        summary_frame.setStyleSheet("""
+            QFrame { background: #e8eaf6; border: 1px solid #c5cae9; border-radius: 6px; padding: 8px; }
+            QLabel { font-size: 12px; font-weight: bold; color: #1a237e; padding: 2px 4px; }
+        """)
+        summary_layout = QHBoxLayout(summary_frame)
+        summary_layout.setContentsMargins(12, 6, 12, 6)
+        summary_layout.setSpacing(20)
+
+        self.ol_opening = QLabel("Opening Balance: ₹0.00")
+        summary_layout.addWidget(self.ol_opening)
+        summary_layout.addWidget(QLabel("|"))
+        self.ol_bills = QLabel("Bills (Period): ₹0.00")
+        summary_layout.addWidget(self.ol_bills)
+        summary_layout.addWidget(QLabel("|"))
+        self.ol_receipts = QLabel("Receipts (Period): ₹0.00")
+        summary_layout.addWidget(self.ol_receipts)
+        summary_layout.addWidget(QLabel("|"))
+        self.ol_closing = QLabel("Closing Balance: ₹0.00")
+        summary_layout.addWidget(self.ol_closing)
+        summary_layout.addStretch()
+
+        layout.addWidget(summary_frame)
+        layout.addSpacing(8)
+
         self.list_table = QTableWidget()
         self.list_table.setColumnCount(7)
         self.list_table.setHorizontalHeaderLabels(
@@ -564,6 +591,16 @@ class BillingWindow(QWidget):
         query = self.list_search.text()
         date_from = self.list_date_from.date().toString("yyyy-MM-dd")
         date_to = self.list_date_to.date().toString("yyyy-MM-dd")
+
+        # Opening balance & period totals
+        opening = get_opening_balance(date_from)
+        period_bills, period_receipts = get_period_totals(date_from, date_to)
+        closing = opening + period_bills - period_receipts
+        self.ol_opening.setText(f"Opening Balance: ₹{opening:,.2f}")
+        self.ol_bills.setText(f"Bills (Period): ₹{period_bills:,.2f}")
+        self.ol_receipts.setText(f"Receipts (Period): ₹{period_receipts:,.2f}")
+        self.ol_closing.setText(f"Closing Balance: ₹{closing:,.2f}")
+
         bills, total = search_sale_bills(
             query, date_from, date_to, page=self._current_page, page_size=100
         )
