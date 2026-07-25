@@ -368,7 +368,7 @@ class CreateReceiptDialog(QDialog):
             if n >= 100:
                 res += units[n // 100] + " Hundred "
                 n %= 100
-            if 10 < n < 20:
+            if 10 <= n < 20:
                 res += teens[n - 10] + " "
             else:
                 if n >= 20:
