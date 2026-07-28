@@ -13,7 +13,7 @@ from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-from settings import get_company, get_db_setting
+from settings import get_company
 from billing import get_sale_bill, get_entries_for_consolidated_bill
 from receipt import get_receipt
 from reports import get_customer_statement
@@ -385,28 +385,6 @@ def generate_bill_pdf(bill_id: int, output_path: str | None = None) -> str:
         elements.append(Spacer(1, 0.5*mm))
 
     cname = company.get("name", "Ragumani Transport & Fire Woods Suppliers")
-    terms_text = get_db_setting("terms",
-        "1. All disputes subject to local jurisdiction.\n"
-        "2. Payment due within 15 days from bill date.\n"
-        "3. Goods once sold will not be taken back.")
-    terms_html = terms_text.replace("\n", "<br/>")
-
-    terms_tbl = Table(
-        [[Paragraph("<b>Terms &amp; Conditions</b>",
-                     ParagraphStyle("TL", fontName=FONT_NAME, fontSize=8, textColor=GREY)),
-          Paragraph(terms_html,
-                     ParagraphStyle("TV", fontName=FONT_NAME, fontSize=8, textColor=BLACK, leading=11))]],
-        colWidths=[28*mm, 66*mm],
-    )
-    terms_tbl.setStyle(TableStyle([
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("BOX", (0, 0), (-1, -1), 0.3, BORDER),
-        ("TOPPADDING", (0, 0), (-1, -1), 3),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-        ("LEFTPADDING", (0, 0), (-1, -1), 4),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-        ("BACKGROUND", (0, 0), (-1, 0), LIGHT_GREY),
-    ]))
 
     sig_text = (
         f"For <b>{cname}</b><br/><br/>"
@@ -417,7 +395,7 @@ def generate_bill_pdf(bill_id: int, output_path: str | None = None) -> str:
         [[Paragraph(sig_text,
                      ParagraphStyle("SV", fontName=FONT_NAME, fontSize=10,
                                      alignment=TA_RIGHT, textColor=BLACK, leading=16))]],
-        colWidths=[80*mm],
+        colWidths=[186*mm],
     )
     sig_tbl.setStyle(TableStyle([
         ("ALIGN", (0, 0), (-1, -1), "RIGHT"),
@@ -425,7 +403,7 @@ def generate_bill_pdf(bill_id: int, output_path: str | None = None) -> str:
         ("TOPPADDING", (0, 0), (-1, -1), 0),
     ]))
 
-    bottom = Table([[terms_tbl, sig_tbl]], colWidths=[94*mm, 92*mm])
+    bottom = Table([[sig_tbl]])
     bottom.setStyle(TableStyle([
         ("VALIGN", (0, 0), (-1, -1), "BOTTOM"),
         ("LEFTPADDING", (0, 0), (-1, -1), 0),
@@ -614,28 +592,6 @@ def generate_consolidated_bill_pdf(
         elements.append(Spacer(1, 0.5*mm))
 
     cname = company.get("name", "Ragumani Transport & Fire Woods Suppliers")
-    terms_text = get_db_setting("terms",
-        "1. All disputes subject to local jurisdiction.\n"
-        "2. Payment due within 15 days from bill date.\n"
-        "3. Goods once sold will not be taken back.")
-    terms_html = terms_text.replace("\n", "<br/>")
-
-    terms_tbl = Table(
-        [[Paragraph("<b>Terms &amp; Conditions</b>",
-                     ParagraphStyle("TL", fontName=FONT_NAME, fontSize=8, textColor=GREY)),
-          Paragraph(terms_html,
-                     ParagraphStyle("TV", fontName=FONT_NAME, fontSize=8, textColor=BLACK, leading=11))]],
-        colWidths=[28*mm, 66*mm],
-    )
-    terms_tbl.setStyle(TableStyle([
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("BOX", (0, 0), (-1, -1), 0.3, BORDER),
-        ("TOPPADDING", (0, 0), (-1, -1), 3),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-        ("LEFTPADDING", (0, 0), (-1, -1), 4),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-        ("BACKGROUND", (0, 0), (-1, 0), LIGHT_GREY),
-    ]))
 
     sig_text = (
         f"For <b>{cname}</b><br/><br/>"
@@ -646,7 +602,7 @@ def generate_consolidated_bill_pdf(
         [[Paragraph(sig_text,
                      ParagraphStyle("SV", fontName=FONT_NAME, fontSize=10,
                                      alignment=TA_RIGHT, textColor=BLACK, leading=16))]],
-        colWidths=[80*mm],
+        colWidths=[186*mm],
     )
     sig_tbl.setStyle(TableStyle([
         ("ALIGN", (0, 0), (-1, -1), "RIGHT"),
@@ -654,7 +610,7 @@ def generate_consolidated_bill_pdf(
         ("TOPPADDING", (0, 0), (-1, -1), 0),
     ]))
 
-    bottom = Table([[terms_tbl, sig_tbl]], colWidths=[94*mm, 92*mm])
+    bottom = Table([[sig_tbl]])
     bottom.setStyle(TableStyle([
         ("VALIGN", (0, 0), (-1, -1), "BOTTOM"),
         ("LEFTPADDING", (0, 0), (-1, -1), 0),
@@ -1202,28 +1158,6 @@ def generate_blank_invoice_pdf(
         elements.append(Spacer(1, 0.5*mm))
 
     cname = company.get("name", "Ragumani Transport & Fire Woods Suppliers")
-    terms_text = get_db_setting("terms",
-        "1. All disputes subject to local jurisdiction.\n"
-        "2. Payment due within 15 days from bill date.\n"
-        "3. Goods once sold will not be taken back.")
-    terms_html = terms_text.replace("\n", "<br/>")
-
-    terms_tbl = Table(
-        [[Paragraph("<b>Terms &amp; Conditions</b>",
-                     ParagraphStyle("TL", fontName=FONT_NAME, fontSize=8, textColor=GREY)),
-          Paragraph(terms_html,
-                     ParagraphStyle("TV", fontName=FONT_NAME, fontSize=8, textColor=BLACK, leading=11))]],
-        colWidths=[28*mm, 66*mm],
-    )
-    terms_tbl.setStyle(TableStyle([
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("BOX", (0, 0), (-1, -1), 0.3, BORDER),
-        ("TOPPADDING", (0, 0), (-1, -1), 3),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-        ("LEFTPADDING", (0, 0), (-1, -1), 4),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-        ("BACKGROUND", (0, 0), (-1, 0), LIGHT_GREY),
-    ]))
 
     sig_text = (
         f"For <b>{cname}</b><br/><br/>"
@@ -1234,7 +1168,7 @@ def generate_blank_invoice_pdf(
         [[Paragraph(sig_text,
                      ParagraphStyle("SV", fontName=FONT_NAME, fontSize=10,
                                      alignment=TA_RIGHT, textColor=BLACK, leading=16))]],
-        colWidths=[80*mm],
+        colWidths=[186*mm],
     )
     sig_tbl.setStyle(TableStyle([
         ("ALIGN", (0, 0), (-1, -1), "RIGHT"),
@@ -1242,7 +1176,7 @@ def generate_blank_invoice_pdf(
         ("TOPPADDING", (0, 0), (-1, -1), 0),
     ]))
 
-    bottom = Table([[terms_tbl, sig_tbl]], colWidths=[94*mm, 92*mm])
+    bottom = Table([[sig_tbl]])
     bottom.setStyle(TableStyle([
         ("VALIGN", (0, 0), (-1, -1), "BOTTOM"),
         ("LEFTPADDING", (0, 0), (-1, -1), 0),

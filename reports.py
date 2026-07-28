@@ -6,11 +6,16 @@ def get_customer_statement(
 ) -> dict:
     conn = get_connection()
 
-    # Opening balance from customer record
-    cust = conn.execute(
-        "SELECT opening_balance FROM customer WHERE id=?", (customer_id,)
-    ).fetchone()
-    opening_balance = cust["opening_balance"] if cust else 0
+    # Opening balance = active bills - active receipts for this customer BEFORE date_from
+    bills_before = conn.execute(
+        "SELECT COALESCE(SUM(amount), 0) FROM sale_bill WHERE customer_id=? AND bill_date < ? AND status='active'",
+        (customer_id, date_from),
+    ).fetchone()[0]
+    receipts_before = conn.execute(
+        "SELECT COALESCE(SUM(amount), 0) FROM receipt WHERE customer_id=? AND receipt_date < ? AND status='active'",
+        (customer_id, date_from),
+    ).fetchone()[0]
+    opening_balance = bills_before - receipts_before
 
     # All transactions (bills + receipts) in date range, sorted by date
     bills = conn.execute(
