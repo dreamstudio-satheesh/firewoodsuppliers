@@ -721,6 +721,31 @@ def generate_statement_pdf(
     elements.append(info_table)
     elements.append(Spacer(1, 3*mm))
 
+    # Bank details (like bill print)
+    bank_parts = []
+    if company.get("bank_name"):
+        bank_parts.append(f"Bank: {company['bank_name']}")
+    if company.get("bank_account"):
+        bank_parts.append(f"A/C: {company['bank_account']}")
+    if company.get("bank_ifsc"):
+        bank_parts.append(f"IFSC: {company['bank_ifsc']}")
+    if bank_parts:
+        bank_text = "&nbsp;&nbsp;|&nbsp;&nbsp;".join(bank_parts)
+        bk_tbl = Table(
+            [[Paragraph("<b>Bank Details:</b>",
+                         ParagraphStyle("BKL", fontName=FONT_NAME, fontSize=10, textColor=GREY)),
+              Paragraph(bank_text,
+                         ParagraphStyle("BKV", fontName=FONT_NAME, fontSize=10, textColor=BLACK))]],
+            colWidths=[26*mm, 136*mm],
+        )
+        bk_tbl.setStyle(TableStyle([
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("TOPPADDING", (0, 0), (-1, -1), 2),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+        ]))
+        elements.append(bk_tbl)
+        elements.append(Spacer(1, 0.5*mm))
+
     def _short_ref(ref: str) -> str:
         """Strip BL/2026/ or RC/2026/ prefix, keep only the number."""
         parts = ref.split("/")
