@@ -503,12 +503,13 @@ def generate_consolidated_bill_pdf(
     elements.append(info_table)
     elements.append(Spacer(1, 4*mm))
 
-    hdr = ["#", "Date", "Vehicle", "Gross", "Tare", "Net Wt", "Amount"]
-    cw = [7*mm, 28*mm, 32*mm, 22*mm, 20*mm, 24*mm, 28*mm]
+    # --- Bills Table ---
+    bill_hdr = ["#", "Date", "Vehicle", "Gross", "Tare", "Net Wt", "Amount"]
+    bill_cw = [7*mm, 28*mm, 32*mm, 22*mm, 20*mm, 24*mm, 28*mm]
 
-    data = [hdr]
+    bill_data = [bill_hdr]
     for i, e in enumerate(entries, 1):
-        data.append([
+        bill_data.append([
             str(i),
             _fmt_date(e["bill_date"]),
             e.get("vehicle_no", ""),
@@ -517,14 +518,14 @@ def generate_consolidated_bill_pdf(
             f"{e['net_weight']:.2f}",
             f"{e['amount']:.2f}",
         ])
-    data.append(["", "", "", "", "", "", ""])
-    data.append(["", "", "", "", "", "Total Amount", f"{total_amount:.2f}"])
+    bill_data.append(["", "", "", "", "", "", ""])
+    bill_data.append(["", "", "", "", "", "Total Amount", f"{total_amount:.2f}"])
 
     total_n = 2
     total_start = -total_n
 
-    tbl = Table(data, colWidths=cw, repeatRows=1)
-    style_cmds = [
+    bill_tbl = Table(bill_data, colWidths=bill_cw, repeatRows=1)
+    bill_style = [
         ("BACKGROUND", (0, 0), (-1, 0), NAVY),
         ("TEXTCOLOR", (0, 0), (-1, 0), WHITE),
         ("FONTNAME", (0, 0), (-1, -1), FONT_NAME),
@@ -544,29 +545,86 @@ def generate_consolidated_bill_pdf(
         ("LEFTPADDING", (0, 0), (-1, -1), 3),
         ("RIGHTPADDING", (0, 0), (-1, -1), 3),
     ]
-    tbl.setStyle(TableStyle(style_cmds))
-    elements.append(tbl)
+    bill_tbl.setStyle(TableStyle(bill_style))
+    elements.append(bill_tbl)
     elements.append(Spacer(1, 4*mm))
 
-    words = _amount_in_words(total_amount)
-    aw_tbl = Table(
-        [[Paragraph("<b>Amount in Words:</b>",
-                     ParagraphStyle("AWL", fontName=FONT_NAME, fontSize=10, textColor=NAVY)),
-          Paragraph(words,
-                     ParagraphStyle("AWV", fontName=FONT_NAME, fontSize=10, textColor=NAVY, leading=13))]],
-        colWidths=[30*mm, 132*mm],
-    )
-    aw_tbl.setStyle(TableStyle([
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("BOX", (0, 0), (-1, -1), 0.4, BORDER),
-        ("BACKGROUND", (0, 0), (-1, -1), LIGHT_GREY),
-        ("TOPPADDING", (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-        ("LEFTPADDING", (0, 0), (-1, -1), 6),
-    ]))
-    elements.append(aw_tbl)
-    elements.append(Spacer(1, 1*mm))
+    # --- Receipts Table ---
+    receipts = get_connection().execute(
+        """SELECT receipt_date, receipt_no, mode, reference_no, amount
+           FROM receipt
+           WHERE customer_id=? AND receipt_date BETWEEN ? AND ? AND status='active'
+           ORDER BY receipt_date, id""",
+        (customer_id, date_from, date_to),
+    ).fetchall()
+    receipt_list = [dict(r) for r in receipts]
+    total_receipts = sum(r["amount"] for r in receipt_list)
+    balance = total_amount - total_receipts
 
+    if receipt_list:
+        elements.append(Paragraph("<b>Payments Received</b>",
+            ParagraphStyle("RecvTitle", fontName=FONT_NAME, fontSize=11,
+                           alignment=TA_LEFT, textColor=NAVY, spaceBefore=2*mm, spaceAfter=2*mm)))
+
+        recv_hdr = ["#", "Date", "Receipt No", "Mode", "Reference", "Amount"]
+        recv_cw = [7*mm, 28*mm, 36*mm, 22*mm, 30*mm, 28*mm]
+
+        recv_data = [[Paragraph(h, ParagraphStyle("RH", fontName=FONT_NAME, fontSize=8,
+                                                   alignment=TA_CENTER, textColor=WHITE)) for h in recv_hdr]]
+        for i, r in enumerate(receipt_list, 1):
+            recv_data.append([
+                Paragraph(str(i), ParagraphStyle("RC", fontName=FONT_NAME, fontSize=8, alignment=TA_CENTER)),
+                Paragraph(str(r.get("receipt_date", "")), ParagraphStyle("RC", fontName=FONT_NAME, fontSize=8, alignment=TA_CENTER)),
+                Paragraph(str(r.get("receipt_no", "")), ParagraphStyle("RC", fontName=FONT_NAME, fontSize=8, alignment=TA_CENTER)),
+                Paragraph(str(r.get("mode", "")), ParagraphStyle("RC", fontName=FONT_NAME, fontSize=8, alignment=TA_CENTER)),
+                Paragraph(str(r.get("reference_no", "") or ""), ParagraphStyle("RC", fontName=FONT_NAME, fontSize=8, alignment=TA_CENTER)),
+                Paragraph(f"{r['amount']:.2f}", ParagraphStyle("RC", fontName=FONT_NAME, fontSize=8, alignment=TA_CENTER)),
+            ])
+        recv_data.append([Paragraph("", ParagraphStyle("RC", fontName=FONT_NAME, fontSize=8))] * 4 + [
+            Paragraph("<b>Total Received</b>", ParagraphStyle("RCTL", fontName=FONT_NAME, fontSize=9, alignment=TA_CENTER, textColor=NAVY)),
+            Paragraph(f"<b>{total_receipts:,.2f}</b>", ParagraphStyle("RCTV", fontName=FONT_NAME, fontSize=9, alignment=TA_CENTER, textColor=NAVY)),
+        ])
+
+        recv_tbl = Table(recv_data, colWidths=recv_cw, repeatRows=1)
+        recv_tbl.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), NAVY),
+            ("TEXTCOLOR", (0, 0), (-1, 0), WHITE),
+            ("FONTNAME", (0, 0), (-1, -1), FONT_NAME),
+            ("FONTSIZE", (0, 0), (-1, -1), 8),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("GRID", (0, 1), (-1, -2), 0.3, BORDER),
+            ("LINEABOVE", (0, -1), (-1, -1), 0.8, NAVY),
+            ("BACKGROUND", (0, -1), (-1, -1), LIGHT_NAVY),
+            ("TOPPADDING", (0, 0), (-1, -1), 2),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+            ("LEFTPADDING", (0, 0), (-1, -1), 3),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 3),
+        ]))
+        elements.append(recv_tbl)
+        elements.append(Spacer(1, 3*mm))
+
+    # --- Closing Balance ---
+    bal_tbl = Table(
+        [[Paragraph("<b>Closing Balance (Pending):</b>",
+                     ParagraphStyle("CBL", fontName=FONT_NAME, fontSize=12, alignment=TA_RIGHT, textColor=NAVY)),
+          Paragraph(f"<b>₹ {balance:,.2f}</b>",
+                     ParagraphStyle("CBV", fontName=FONT_NAME, fontSize=12, alignment=TA_RIGHT, textColor=NAVY))]],
+        colWidths=[130*mm, 50*mm],
+    )
+    bal_tbl.setStyle(TableStyle([
+        ("BOX", (0, 0), (-1, -1), 1.0, NAVY),
+        ("BACKGROUND", (0, 0), (-1, -1), LIGHT_NAVY),
+        ("TOPPADDING", (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("LEFTPADDING", (0, 0), (-1, -1), 8),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+    ]))
+    elements.append(bal_tbl)
+    elements.append(Spacer(1, 3*mm))
+
+    # --- Bank Details ---
     bank_parts = []
     if company.get("bank_name"):
         bank_parts.append(f"Bank: {company['bank_name']}")
@@ -665,9 +723,6 @@ def generate_statement_pdf(
     elements.append(Spacer(1, 3*mm))
 
     # Info block — two separate boxes side by side
-    total_sale = sum(t['debit'] for t in stmt['transactions'])
-    total_recv = sum(t['credit'] for t in stmt['transactions'])
-
     left_rows = [
         _info_pair("Customer", f"<b>{customer_name}</b>"),
         _info_pair("Period", f"<b>{_fmt_date(date_from)}</b> to <b>{_fmt_date(date_to)}</b>"),
@@ -691,8 +746,6 @@ def generate_statement_pdf(
     ]))
 
     right_rows = [
-        _info_pair("Total Sales", f"<b>{total_sale:,.2f}</b>"),
-        _info_pair("Total Received", f"<b>{total_recv:,.2f}</b>"),
         _info_pair("Closing Balance", f"<b>{stmt['closing_balance']:,.2f}</b>"),
     ]
     right_tbl = Table(right_rows, colWidths=[36*mm, 26*mm])
@@ -767,8 +820,6 @@ def generate_statement_pdf(
         f"{stmt['opening_balance']:,.2f}",
     ])
 
-    total_sale = 0
-    total_recv = 0
     for i, t in enumerate(stmt["transactions"], 1):
         if t["type"] == "Bill":
             desc = f"Sale - {_short_ref(t['ref_no'])}"
@@ -783,7 +834,6 @@ def generate_statement_pdf(
                 "",
                 f"{t['balance']:,.2f}",
             ])
-            total_sale += t["debit"]
         else:
             desc = f"Payment - {_short_ref(t['ref_no'])}"
             data.append([
@@ -793,19 +843,16 @@ def generate_statement_pdf(
                 f"{t['credit']:,.2f}",
                 f"{t['balance']:,.2f}",
             ])
-            total_recv += t["credit"]
 
     # Totals row
     data.append(["", "", "", "", "", "", "", "", "", ""])
     data.append([
         "",
         "",
-        Paragraph("<b>Total</b>",
+        Paragraph("<b>Closing Balance</b>",
                    ParagraphStyle("TTL", fontName=FONT_NAME, fontSize=10)),
-        "", "", "", "",
-        f"{total_sale:,.2f}" if total_sale else "",
-        f"{total_recv:,.2f}" if total_recv else "",
-        "",
+        "", "", "", "", "", "",
+        f"{stmt['closing_balance']:,.2f}",
     ])
 
     tbl = Table(data, colWidths=cw, repeatRows=1)

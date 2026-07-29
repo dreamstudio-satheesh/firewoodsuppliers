@@ -133,3 +133,35 @@ def sales_register(from_date: str, to_date: str, period: str = "day") -> list[di
     return [dict(r) for r in rows]
 
 
+def sales_detail_with_receipts(from_date: str, to_date: str) -> dict:
+    """Return bills + receipts for a period with totals, for the Sales Register PDF."""
+    conn = get_connection()
+    bills = conn.execute(
+        """SELECT bill_date, bill_no, customer_name, vehicle_no,
+                  gross_weight, tare_weight, net_weight, amount
+           FROM sale_bill
+           WHERE bill_date BETWEEN ? AND ? AND status='active'
+           ORDER BY bill_date, id""",
+        (from_date, to_date),
+    ).fetchall()
+    receipts = conn.execute(
+        """SELECT receipt_date, receipt_no, customer_name, mode,
+                  reference_no, amount
+           FROM receipt
+           WHERE receipt_date BETWEEN ? AND ? AND status='active'
+           ORDER BY receipt_date, id""",
+        (from_date, to_date),
+    ).fetchall()
+    bill_list = [dict(r) for r in bills]
+    recv_list = [dict(r) for r in receipts]
+    total_bills = sum(b["amount"] for b in bill_list)
+    total_receipts = sum(r["amount"] for r in recv_list)
+    return {
+        "bills": bill_list,
+        "receipts": recv_list,
+        "total_bills": total_bills,
+        "total_receipts": total_receipts,
+        "balance": total_bills - total_receipts,
+    }
+
+

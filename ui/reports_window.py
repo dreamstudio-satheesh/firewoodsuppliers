@@ -10,9 +10,9 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 
-from reports import sales_register, sales_detail
+from reports import sales_register, sales_detail, sales_detail_with_receipts
 from customer import get_all_customers
-from exporter import export_csv, export_xlsx, export_pdf_table
+from exporter import export_csv, export_xlsx, export_pdf_table, export_sales_register_pdf
 from printer import open_pdf, generate_statement_pdf
 
 
@@ -206,6 +206,47 @@ class SalesRegisterTab(ReportTab):
         from_date = self.date_from.date().toString("yyyy-MM-dd")
         to_date = self.date_to.date().toString("yyyy-MM-dd")
 
+        if fmt == "pdf":
+            # Use combined bills+receipts layout for PDF
+            try:
+                combined = sales_detail_with_receipts(from_date, to_date)
+            except Exception as e:
+                QMessageBox.warning(self, "Error", str(e))
+                return
+
+            if not combined["bills"] and not combined["receipts"]:
+                QMessageBox.information(self, "Export", "No data to export.")
+                return
+
+            # Format dates in bills and receipts
+            for b in combined["bills"]:
+                b["bill_date"] = _fmt_date(b.get("bill_date", ""))
+            for r in combined["receipts"]:
+                r["receipt_date"] = _fmt_date(r.get("receipt_date", ""))
+
+            safe_title = self._title.replace(" ", "_")
+            base = os.path.join(tempfile.gettempdir(), safe_title)
+            path = f"{base}.{fmt}"
+
+            try:
+                path = export_sales_register_pdf(
+                    bills=combined["bills"],
+                    receipts=combined["receipts"],
+                    total_bills=combined["total_bills"],
+                    total_receipts=combined["total_receipts"],
+                    balance=combined["balance"],
+                    title=self._title,
+                    date_from=_fmt_date(from_date),
+                    date_to=_fmt_date(to_date),
+                    output_path=path,
+                )
+                QMessageBox.information(self, "Exported", f"PDF saved to:\n{path}")
+                open_pdf(path)
+            except Exception as e:
+                QMessageBox.critical(self, "Export Error", str(e))
+            return
+
+        # For CSV / XLSX — keep existing bills-only export
         try:
             raw = self._fetch_fn(from_date, to_date)
         except Exception as e:
@@ -233,15 +274,10 @@ class SalesRegisterTab(ReportTab):
             elif fmt == "xlsx":
                 path = export_xlsx(data, self._column_headers, self._column_keys,
                                    self._title[:31], path)
-            elif fmt == "pdf":
-                path = export_pdf_table(data, self._column_headers, self._column_keys,
-                                        self._title, path)
             QMessageBox.information(
                 self, "Exported",
                 f"{fmt.upper()} saved to:\n{path}"
             )
-            if fmt == "pdf":
-                open_pdf(path)
         except Exception as e:
             QMessageBox.critical(self, "Export Error", str(e))
 
