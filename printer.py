@@ -746,7 +746,7 @@ def generate_statement_pdf(
     ]))
 
     right_rows = [
-        _info_pair("Closing Balance", f"<b>{stmt['closing_balance']:,.2f}</b>"),
+        _info_pair("Closing Balance", f"<b>₹ {stmt['closing_balance']:,.2f}</b>"),
     ]
     right_tbl = Table(right_rows, colWidths=[36*mm, 26*mm])
     right_tbl.setStyle(TableStyle([
@@ -852,7 +852,7 @@ def generate_statement_pdf(
         Paragraph("<b>Closing Balance</b>",
                    ParagraphStyle("TTL", fontName=FONT_NAME, fontSize=10)),
         "", "", "", "", "", "",
-        f"{stmt['closing_balance']:,.2f}",
+        f"₹ {stmt['closing_balance']:,.2f}",
     ])
 
     tbl = Table(data, colWidths=cw, repeatRows=1)
