@@ -490,10 +490,24 @@ class ReportsWindow(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(24, 24, 24, 24)
 
+        header_row = QHBoxLayout()
         header = QLabel("Reports")
         header.setFont(QFont("Segoe UI", 18, QFont.Bold))
         header.setStyleSheet("color: #1a237e;")
-        layout.addWidget(header)
+        header_row.addWidget(header)
+
+        header_row.addStretch()
+
+        clear_pdf_btn = QPushButton("  Clear PDFs")
+        clear_pdf_btn.setStyleSheet("""
+            QPushButton { background: #d32f2f; color: white; padding: 6px 16px;
+                          border: none; border-radius: 4px; font-weight: bold; }
+            QPushButton:hover { background: #b71c1c; }
+        """)
+        clear_pdf_btn.clicked.connect(self._clear_pdf_output)
+        header_row.addWidget(clear_pdf_btn)
+
+        layout.addLayout(header_row)
         layout.addSpacing(12)
 
         self.tabs = QTabWidget()
@@ -510,6 +524,27 @@ class ReportsWindow(QWidget):
         self.tabs.addTab(self.sales_tab, "  Sales Register")
 
         layout.addWidget(self.tabs)
+
+    def _clear_pdf_output(self):
+        import shutil
+        pdf_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "pdf_output")
+        if not os.path.isdir(pdf_dir):
+            QMessageBox.information(self, "Clear PDFs", "No pdf_output folder found.")
+            return
+        ok = QMessageBox.question(
+            self, "Confirm",
+            "Delete all files in pdf_output folder?",
+            QMessageBox.Yes | QMessageBox.No
+        )
+        if ok != QMessageBox.Yes:
+            return
+        count = 0
+        for fname in os.listdir(pdf_dir):
+            fpath = os.path.join(pdf_dir, fname)
+            if os.path.isfile(fpath):
+                os.remove(fpath)
+                count += 1
+        QMessageBox.information(self, "Cleared", f"Deleted {count} PDF file(s) from pdf_output.")
 
     def refresh(self):
         idx = self.tabs.currentIndex()
