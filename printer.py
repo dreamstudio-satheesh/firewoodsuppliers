@@ -608,7 +608,7 @@ def generate_consolidated_bill_pdf(
     bal_tbl = Table(
         [[Paragraph("<b>Closing Balance (Pending):</b>",
                      ParagraphStyle("CBL", fontName=FONT_NAME, fontSize=12, alignment=TA_RIGHT, textColor=NAVY)),
-          Paragraph(f"<b>₹ {balance:,.2f}</b>",
+          Paragraph(f"<b>Rs. {balance:,.2f}</b>",
                      ParagraphStyle("CBV", fontName=FONT_NAME, fontSize=12, alignment=TA_RIGHT, textColor=NAVY))]],
         colWidths=[130*mm, 50*mm],
     )
@@ -746,7 +746,7 @@ def generate_statement_pdf(
     ]))
 
     right_rows = [
-        _info_pair("Closing Balance", f"<b>₹ {stmt['closing_balance']:,.2f}</b>"),
+        _info_pair("Closing Balance", f"<b>Rs. {stmt['closing_balance']:,.2f}</b>"),
     ]
     right_tbl = Table(right_rows, colWidths=[36*mm, 26*mm])
     right_tbl.setStyle(TableStyle([
@@ -852,7 +852,7 @@ def generate_statement_pdf(
         Paragraph("<b>Closing Balance</b>",
                    ParagraphStyle("TTL", fontName=FONT_NAME, fontSize=10)),
         "", "", "", "", "", "",
-        f"₹ {stmt['closing_balance']:,.2f}",
+        f"Rs. {stmt['closing_balance']:,.2f}",
     ])
 
     tbl = Table(data, colWidths=cw, repeatRows=1)

@@ -342,7 +342,7 @@ def export_sales_register_pdf(
 
     # --- Closing Balance ---
     elements.append(Paragraph(
-        f"<b>Closing Balance (Pending):  ₹ {balance:,.2f}</b>",
+        f"<b>Closing Balance (Pending):  Rs. {balance:,.2f}</b>",
         s_balance,
     ))
     elements.append(Spacer(1, 2*mm))
